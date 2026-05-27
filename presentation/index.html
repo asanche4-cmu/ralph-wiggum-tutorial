@@ -1,0 +1,1408 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Getting Good LLM Results</title>
+    <link rel="stylesheet" href="node_modules/reveal.js/dist/reveal.css" />
+    <link rel="stylesheet" href="node_modules/reveal.js/dist/theme/dracula.css" />
+    <link rel="stylesheet" href="node_modules/reveal.js/dist/plugin/highlight/monokai.css" />
+    <style>
+      :root {
+        --dracula-bg: #282a36;
+        --dracula-panel: #44475a;
+        --dracula-current: #6272a4;
+        --dracula-foreground: #f8f8f2;
+        --dracula-comment: #6272a4;
+        --dracula-cyan: #8be9fd;
+        --dracula-green: #50fa7b;
+        --dracula-orange: #ffb86c;
+        --dracula-pink: #ff79c6;
+        --dracula-purple: #bd93f9;
+        --dracula-yellow: #f1fa8c;
+        --dracula-red: #ff5555;
+      }
+
+      .reveal {
+        font-size: 32px;
+      }
+
+      .reveal .slides section,
+      .reveal .slides section > section {
+        padding: 0.25em;
+      }
+
+      .reveal h1,
+      .reveal h2,
+      .reveal h3,
+      .reveal h4 {
+        text-transform: none;
+        letter-spacing: -0.02em;
+      }
+
+      .reveal h1 {
+        font-size: 2.1em;
+      }
+
+      .reveal h2 {
+        font-size: 1.55em;
+        margin-bottom: 0.35em;
+      }
+
+      .reveal h3 {
+        font-size: 1.05em;
+        color: var(--dracula-cyan);
+      }
+
+      .reveal p,
+      .reveal li {
+        line-height: 1.3;
+      }
+
+      .reveal ul,
+      .reveal ol {
+        display: block;
+        margin-left: 1em;
+      }
+
+      .reveal li {
+        margin: 0.25em 0;
+      }
+
+      .reveal code {
+        color: var(--dracula-yellow);
+      }
+
+      .reveal pre {
+        width: 100%;
+        margin: 0.4em auto;
+        font-size: 0.52em;
+        box-shadow: none;
+      }
+
+      .reveal pre code {
+        max-height: 520px;
+        padding: 1em;
+        line-height: 1.35;
+      }
+
+      .small {
+        font-size: 0.8em;
+      }
+
+      .xsmall {
+        font-size: 0.64em;
+      }
+
+      .tight li {
+        margin: 0.16em 0;
+      }
+
+      .two-col,
+      .three-col {
+        display: grid;
+        gap: 1.1rem;
+        align-items: start;
+      }
+
+      .two-col {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .three-col {
+        grid-template-columns: repeat(3, 1fr);
+      }
+
+      .panel {
+        background: rgba(68, 71, 90, 0.72);
+        border: 1px solid rgba(139, 233, 253, 0.2);
+        border-radius: 14px;
+        padding: 0.8em 1em;
+      }
+
+      .panel strong {
+        color: var(--dracula-yellow);
+      }
+
+      .pill-row {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        justify-content: center;
+        margin-top: 1rem;
+      }
+
+      .pill {
+        border: 1px solid var(--dracula-current);
+        border-radius: 999px;
+        padding: 0.28em 0.7em;
+        font-size: 0.58em;
+        color: var(--dracula-foreground);
+        background: rgba(98, 114, 164, 0.18);
+      }
+
+      .emphasis {
+        color: var(--dracula-cyan);
+      }
+
+      .warning {
+        color: var(--dracula-orange);
+      }
+
+      .success {
+        color: var(--dracula-green);
+      }
+
+      .pink {
+        color: var(--dracula-pink);
+      }
+
+      .quote {
+        font-style: italic;
+        color: var(--dracula-yellow);
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.6em;
+      }
+
+      th,
+      td {
+        border: 1px solid rgba(248, 248, 242, 0.16);
+        padding: 0.48em 0.55em;
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        background: rgba(189, 147, 249, 0.16);
+        color: var(--dracula-yellow);
+      }
+
+      .diagram {
+        font-family: "JetBrains Mono", "Fira Code", monospace;
+        white-space: pre-wrap;
+        text-align: center;
+        color: var(--dracula-green);
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 12px;
+        padding: 0.9em;
+      }
+
+      .big-number {
+        font-size: 2.2em;
+        color: var(--dracula-pink);
+        font-weight: 700;
+      }
+
+      .center-stack {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.75rem;
+      }
+
+      .spectrum {
+        height: 20px;
+        border-radius: 999px;
+        background: linear-gradient(90deg, var(--dracula-purple), var(--dracula-yellow), var(--dracula-cyan));
+        margin: 0.8em 0;
+      }
+
+      .persona-controls {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.55rem;
+        margin: 0.25rem 0 0.75rem;
+      }
+
+      .persona-btn {
+        border: 1px solid rgba(248, 248, 242, 0.22);
+        border-radius: 999px;
+        padding: 0.42em 0.8em;
+        background: rgba(68, 71, 90, 0.7);
+        color: var(--dracula-foreground);
+        font-size: 0.5em;
+        cursor: pointer;
+      }
+
+      .persona-btn.active {
+        background: var(--dracula-pink);
+        color: #111;
+        border-color: var(--dracula-pink);
+      }
+
+      #persona-viz-wrap {
+        width: 100%;
+        min-height: 590px;
+        background: #0d1117;
+        border: 1px solid rgba(139, 233, 253, 0.16);
+        border-radius: 18px;
+        padding: 0.5rem;
+        position: relative;
+      }
+
+      #persona-viz {
+        width: 100%;
+        height: 540px;
+      }
+
+      .viz-tooltip {
+        position: absolute;
+        pointer-events: none;
+        opacity: 0;
+        background: rgba(40, 42, 54, 0.96);
+        color: var(--dracula-foreground);
+        border: 1px solid rgba(139, 233, 253, 0.25);
+        border-radius: 10px;
+        padding: 0.45rem 0.6rem;
+        font-size: 0.42em;
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+      }
+
+      .viz-caption {
+        font-size: 0.48em;
+        color: #c9d1d9;
+        margin-top: 0.35rem;
+      }
+
+      .cluster-legend {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.45rem;
+        margin-top: 0.35rem;
+      }
+
+      .cluster-legend span {
+        font-size: 0.42em;
+        padding: 0.2em 0.5em;
+        border-radius: 999px;
+        border: 1px solid rgba(248, 248, 242, 0.14);
+      }
+
+      .ascii-curve {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.64em;
+        line-height: 1.35;
+        color: var(--dracula-cyan);
+        background: rgba(0, 0, 0, 0.18);
+        border-radius: 12px;
+        padding: 1rem;
+      }
+
+      .footer-note {
+        margin-top: 0.9rem;
+        font-size: 0.46em;
+        color: #c9d1d9;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="reveal">
+      <div class="slides">
+        <section>
+          <section data-background="#44475a">
+            <h1>Getting Good LLM Results</h1>
+            <p class="emphasis">A practical guide to agentic AI development</p>
+            <div class="pill-row">
+              <span class="pill">Agents</span>
+              <span class="pill">Skills</span>
+              <span class="pill">Context</span>
+              <span class="pill">Validation</span>
+            </div>
+            <aside class="notes">
+              Open by framing this as a practical talk. The goal is not magic prompting; it is building repeatable systems for useful outcomes.
+            </aside>
+          </section>
+          <section data-background="#282a36">
+            <h2>Agenda</h2>
+            <ul>
+              <li class="fragment">Context Window</li>
+              <li class="fragment">The Right Tool</li>
+              <li class="fragment">Determinism Mixed with Non-Determinism</li>
+              <li class="fragment">Ensuring Completion</li>
+            </ul>
+            <aside class="notes">
+              Tell the audience the talk moves from mental model to execution model to operational reliability.
+            </aside>
+          </section>
+        </section>
+
+        <section>
+          <section data-background="#44475a">
+            <h2>What do agents do all day?</h2>
+            <p class="emphasis">Mostly the same long-running work humans do — just faster, loopier, and with better grep.</p>
+            <aside class="notes">
+              This is the bridge from abstract AI discussion to software delivery work.
+            </aside>
+          </section>
+          <section data-background="#282a36">
+            <h2>Long Running AI Work Types</h2>
+            <ul class="tight">
+              <li class="fragment">🏗️ <strong>Building</strong> — implementing features and refactors</li>
+              <li class="fragment">🐛 <strong>Debugging</strong> — tracing failures across files and systems</li>
+              <li class="fragment">🧪 <strong>Testing</strong> — generating, running, and fixing tests</li>
+              <li class="fragment">✅ <strong>Validation</strong> — lint, typecheck, security, CI, browser checks</li>
+              <li class="fragment">⚡ <strong>Performance</strong> — finding bottlenecks, measuring, iterating</li>
+            </ul>
+            <aside class="notes">
+              The shape of the work matters because it explains why tools, checkpoints, and deterministic validation matter so much.
+            </aside>
+          </section>
+        </section>
+
+        <section>
+          <section data-background="#44475a">
+            <h2>What Are Agents?</h2>
+            <p>Autonomous AI workers that take instructions, use tools, and iterate toward a goal.</p>
+            <div class="pill-row">
+              <span class="pill">Instruction following</span>
+              <span class="pill">Tool use</span>
+              <span class="pill">Iteration</span>
+              <span class="pill">Goal pursuit</span>
+            </div>
+            <aside class="notes">
+              Emphasize autonomous within constraints, not mystical independence.
+            </aside>
+          </section>
+          <section data-background="#282a36">
+            <h2>Agent Prompt Example</h2>
+            <pre><code class="language-yaml" data-trim>
+---
+name: plan-agent
+description: Agent used for planning features and coordinating handoffs to implementation agents.
+---
+
+# Plan Agent
+
+You are an expert planner and coordinator for software development tasks.
+
+## Relevant Files
+- `README.md` - Project overview
+- `src/**` - Server codebase
+- `frontend/**` - React islands
+- `scripts/**` - Start/stop scripts
+            </code></pre>
+            <aside class="notes">
+              Show how small, persistent agent files replace repeated custom prompting.
+            </aside>
+          </section>
+          <section data-background="#282a36">
+            <h2>Our Agents</h2>
+            <div class="panel">
+              <ul class="tight small">
+                <li><code>plan-agent</code> — Plans features, spawns sub-agents for research, creates implementation specs</li>
+                <li><code>plan-reviewer</code> — Reviews plans for completeness, checks packages, validates test strategy</li>
+              </ul>
+            </div>
+            <aside class="notes">
+              Planner and reviewer create separation of concerns and improve spec quality.
+            </aside>
+          </section>
+          <section data-background="#282a36">
+            <h2>Principles for Agent Design</h2>
+            <ul class="tight">
+              <li class="fragment">Never write a prompt twice</li>
+              <li class="fragment">Keep them small and focused</li>
+              <li class="fragment">Don't aim for exact — give it a direction</li>
+              <li class="fragment">Like experts: DBA, Planner, Developer, Security Engineer</li>
+            </ul>
+            <aside class="notes">
+              The persona is not decoration. It is a control surface over attention and decision trade-offs.
+            </aside>
+          </section>
+        </section>
+
+        <section>
+          <section data-background="#44475a">
+            <h2>A Note on Vector Matrices and Agent Focus</h2>
+            <p class="emphasis">Why persona framing actually works — it's not metaphorical.</p>
+            <aside class="notes">
+              This section gives the mechanistic justification for role prompts.
+            </aside>
+          </section>
+          <section data-background="#282a36">
+            <h2>Role Prompting Research</h2>
+            <ul class="tight small">
+              <li class="fragment"><strong>"Role-Play Prompting"</strong> (Kong et al., NAACL 2024) — AQuA accuracy: 53.5% → 63.8%</li>
+              <li class="fragment"><strong>"ExpertPrompting"</strong> (Xu et al., 2023) — ExpertLLaMA at 96% of ChatGPT</li>
+              <li class="fragment"><strong>"In-Context Impersonation"</strong> (Salewski et al., NeurIPS 2023 Spotlight)</li>
+              <li class="fragment"><strong>"Representation Engineering"</strong> (Zou et al., 2023) — 36+ behaviors controlled via vectors</li>
+            </ul>
+            <aside class="notes">
+              The headline is that prompting as an expert changes measurable task performance.
+            </aside>
+          </section>
+          <section data-background="#282a36">
+            <h2>Mechanism: the Causal Chain</h2>
+            <div class="diagram">Terminology Choice → Token Embedding → Attention Circuits →
+Residual Stream → Sparse Feature Activation → Output Distribution</div>
+            <p class="small"><strong>Key insight:</strong> <span class="quote">"security engineer"</span> literally activates different neural features than <span class="quote">"software developer"</span>.</p>
+            <aside class="notes">
+              Make this concrete: words select trajectories through the model, not just vibes.
+            </aside>
+          </section>
+          <section data-background="#282a36">
+            <h2>Anthropic's Proof</h2>
+            <ul class="tight small">
+              <li class="fragment"><strong>"Scaling Monosemanticity"</strong> (Anthropic, May 2024) — found features for <span class="quote">"code with security vulnerabilities"</span> vs <span class="quote">"abstract discussion of security"</span></li>
+              <li class="fragment"><strong>"Refusal in Language Models Is Mediated by a Single Direction"</strong> (Arditi et al., 2024) — complex behaviors live in 1D subspaces</li>
+            </ul>
+            <aside class="notes">
+              The important point is not interpretability trivia; it is that behavior steering is real and directional.
+            </aside>
+          </section>
+          <section data-background="#282a36">
+            <h2>Interactive Persona Vector Space</h2>
+            <div class="persona-controls">
+              <button class="persona-btn active" data-persona="security" onclick="switchPersona('security')">🔐 Security Engineer</button>
+              <button class="persona-btn" data-persona="developer" onclick="switchPersona('developer')">💻 Developer</button>
+              <button class="persona-btn" data-persona="product" onclick="switchPersona('product')">📊 Product Manager</button>
+              <button class="persona-btn" data-persona="educator" onclick="switchPersona('educator')">🎓 Educator</button>
+            </div>
+            <div id="persona-viz-wrap">
+              <div id="persona-viz"></div>
+              <div id="persona-tooltip" class="viz-tooltip"></div>
+            </div>
+            <div id="cluster-legend" class="cluster-legend"></div>
+            <div class="viz-caption">Same concepts, different latent geometry. Click personas to see how relevance clusters shift.</div>
+            <aside class="notes">
+              Click through personas. Explain that the same concepts move because each role prioritizes different relations and boundaries.
+            </aside>
+          </section>
+        </section>
+
+        <section>
+          <section data-background="#44475a">
+            <h2>What Are Skills?</h2>
+            <p>Reusable, structured workflows that combine deterministic steps with AI reasoning.</p>
+            <aside class="notes">
+              Skills are how you package judgment plus procedure.
+            </aside>
+          </section>
+          <section data-background="#282a36">
+            <h2>Skill Prompt Example</h2>
+            <pre><code class="language-markdown" data-trim>
+---
+name: git-commit
+description: Creates a git commit from staged/unstaged changes with an AI-generated commit message.
+allowed-tools: Read, Bash, Grep, Glob
+---
+
+## Workflow
+### 1. Gather Context
+```bash
+git --no-pager status --short
+git --no-pager diff --cached
+git --no-pager diff
+```
+            </code></pre>
+            <aside class="notes">
+              A skill is reusable because the deterministic shell scaffolding is stable, while the language model interprets the diff.
+            </aside>
+          </section>
+          <section data-background="#282a36">
+            <h2>Deterministic Validation Inside a Skill</h2>
+            <pre><code class="language-markdown" data-trim>
+## Validation Steps (Deterministic)
+- `scripts/lint` (flake8)
+- `scripts/mypy` (strict type checking)
+- `scripts/test --python` (pytest)
+            </code></pre>
+            <aside class="notes">
+              This is the key pattern: free-form reasoning surrounded by exact executable guardrails.
+            </aside>
+          </section>
+          <section data-background="#282a36">
+            <h2>Our Skills</h2>
+            <ul class="tight small">
+              <li><code>git-commit</code> — AI-generated commits with git notes for reasoning</li>
+              <li><code>test-in-browser</code> — Playwright MCP browser testing workflow</li>
+              <li><code>python-code-simplifier</code> — Refines Python code, runs lint/mypy/tests</li>
+              <li><code>typescript-code-simplifier</code> — Refines TS code, runs lint/typecheck</li>
+            </ul>
+            <aside class="notes">
+              These become building blocks. The operator asks for an outcome; the skill carries the recipe.
+            </aside>
+          </section>
+          <section data-background="#282a36">
+            <h2>Abstraction Stack</h2>
+            <div class="center-stack">
+              <div class="panel">Agent</div>
+              <div class="big-number">+</div>
+              <div class="panel">Skill</div>
+              <div class="big-number">+</div>
+              <div class="panel">Tools</div>
+              <div class="big-number">=</div>
+              <div class="panel"><strong>Full-service prompt</strong></div>
+            </div>
+            <aside class="notes">
+              This is the move from one-off prompt engineering to reusable operational systems.
+            </aside>
+          </section>
+        </section>
+
+        <section>
+          <section data-background="#44475a">
+            <h2>Certainty in an Uncertain World</h2>
+            <p class="emphasis">The trick is not eliminating uncertainty — it's containing it.</p>
+            <aside class="notes">
+              Introduce the deterministic vs non-deterministic spectrum.
+            </aside>
+          </section>
+          <section data-background="#282a36">
+            <h2>The Spectrum</h2>
+            <div class="spectrum"></div>
+            <div class="two-col small">
+              <div class="panel">
+                <h3>Non-deterministic</h3>
+                <p>Skills and agents are vague by design. They reason, interpret, and adapt.</p>
+              </div>
+              <div class="panel">
+                <h3>Deterministic</h3>
+                <p>Tasks use exact tools, exact commands, exact checks, exact outcomes.</p>
+              </div>
+            </div>
+            <p class="footer-note">Even experts use tools — give your AI tools.</p>
+            <aside class="notes">
+              Emphasize that intelligent systems still need concrete interfaces to reality.
+            </aside>
+          </section>
+        </section>
+
+        <section>
+          <section data-background="#44475a">
+            <h2>CLI Environments Are Full Service</h2>
+            <p>Files. Shell. Git. Tests. Search. Network. Automation.</p>
+            <p class="warning">⚠️ Also dangerous without sandboxing, permissions, and validation.</p>
+            <aside class="notes">
+              This is why environment design matters as much as model choice.
+            </aside>
+          </section>
+        </section>
+
+        <section>
+          <section data-background="#44475a">
+            <h2>Hooks: Determinism in the Agent Lifecycle</h2>
+            <p class="emphasis">Automatic checks at the moments that matter.</p>
+            <aside class="notes">
+              Hooks convert good intentions into guaranteed execution points.
+            </aside>
+          </section>
+          <section data-background="#282a36">
+            <h2>Hook Examples</h2>
+            <ul class="tight small">
+              <li class="fragment">Run linters on completion</li>
+              <li class="fragment">Invoke security agents to validate code before merge</li>
+              <li class="fragment">Chain validation: unit tests → typecheck → browser test → review</li>
+              <li class="fragment">Reject “done” until deterministic checks pass</li>
+            </ul>
+            <aside class="notes">
+              Hooks are one of the highest leverage investments because they scale across every run.
+            </aside>
+          </section>
+        </section>
+
+        <section>
+          <section data-background="#44475a">
+            <h2>Most modern dev tools offer a CLI</h2>
+            <p class="emphasis">If a human can script it, an agent can probably orchestrate it.</p>
+            <aside class="notes">
+              The CLI is the bridge between model reasoning and deterministic execution.
+            </aside>
+          </section>
+          <section data-background="#282a36">
+            <h2>Why the CLI Wins</h2>
+            <ul class="tight small">
+              <li class="fragment">Full suite of arguments and flags</li>
+              <li class="fragment">Compose with shell tools like <code>grep</code>, <code>awk</code>, <code>jq</code>, and pipes</li>
+              <li class="fragment">Wrap SDKs, frameworks, package managers, and infrastructure</li>
+              <li class="fragment">Easy to reuse inside skills, hooks, CI, and scripts</li>
+            </ul>
+            <aside class="notes">
+              A good CLI turns agent work from brittle UI automation into robust system control.
+            </aside>
+          </section>
+        </section>
+
+        <section>
+          <section data-background="#44475a">
+            <h2>The Crack Down</h2>
+            <ul class="tight small">
+              <li class="fragment">Token cost crackdown</li>
+              <li class="fragment">Aggressive caching</li>
+              <li class="fragment"><span class="quote">"get rate limited every day"</span></li>
+              <li class="fragment">Efficiency is now product design, not just optimization</li>
+            </ul>
+            <aside class="notes">
+              The operational environment forces discipline: smaller prompts, better reuse, more deterministic tooling.
+            </aside>
+          </section>
+        </section>
+
+        <section>
+          <section data-background="#44475a">
+            <h2>Find Every Programmatic Tool You Can</h2>
+            <p>APIs, CLIs, MCP servers, scripts, SDKs, browser drivers, database shells, linters, test runners.</p>
+            <aside class="notes">
+              Tool richness directly increases what the agent can verify and complete.
+            </aside>
+          </section>
+          <section data-background="#282a36">
+            <h2>Tools + MCP Example</h2>
+            <div class="two-col">
+              <div>
+                <ul class="tight small">
+                  <li>Playwright MCP</li>
+                  <li>GitHub MCP</li>
+                  <li>Database CLIs</li>
+                  <li>Cloud vendor SDKs</li>
+                  <li>App-specific scripts</li>
+                </ul>
+              </div>
+              <div>
+                <pre><code class="language-json" data-trim>
+{
+  "servers": {
+    "playwright": {
+      "command": "npx",
+      "args": ["@playwright/mcp@latest", "--headless"]
+    }
+  }
+}
+                </code></pre>
+              </div>
+            </div>
+            <aside class="notes">
+              The point is not just having tools, but exposing them in a machine-usable interface.
+            </aside>
+          </section>
+          <section data-background="#282a36">
+            <h2>If an agent can see it, it can use it</h2>
+            <div class="three-col small">
+              <div class="panel"><strong>Observe</strong><br />Logs, DOM, files, diffs, metrics</div>
+              <div class="panel"><strong>Act</strong><br />Commands, clicks, edits, API calls</div>
+              <div class="panel"><strong>Verify</strong><br />Tests, assertions, checks, snapshots</div>
+            </div>
+            <aside class="notes">
+              Capability emerges from the observe-act-verify loop.
+            </aside>
+          </section>
+        </section>
+
+        <section>
+          <section data-background="#44475a">
+            <h2>Context Window</h2>
+            <p class="emphasis">Your best friend and worst enemy.</p>
+            <aside class="notes">
+              Context is both power and failure mode.
+            </aside>
+          </section>
+        </section>
+
+        <section>
+          <section data-background="#44475a">
+            <h2>Model Context Windows</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Model</th>
+                  <th>Window</th>
+                  <th>Operational Reality</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Claude</td>
+                  <td>1M</td>
+                  <td>Great for codebases and long specs, but you can still drown signal in noise</td>
+                </tr>
+                <tr>
+                  <td>GPT-4o</td>
+                  <td>128K</td>
+                  <td>Enough for many app tasks, but requires tighter packing</td>
+                </tr>
+                <tr>
+                  <td>Gemini</td>
+                  <td>1M</td>
+                  <td>Excellent for long inputs, but structure still matters</td>
+                </tr>
+              </tbody>
+            </table>
+            <aside class="notes">
+              A larger window helps, but does not eliminate the placement problem.
+            </aside>
+          </section>
+          <section data-background="#282a36">
+            <h2>The Valley of Meh</h2>
+            <p class="quote">"Lost in the Middle"</p>
+            <p>Too little context starves reasoning. Too much context dilutes relevance. The middle gets ignored.</p>
+            <aside class="notes">
+              Explain that the issue is not just volume; it is where relevant information sits inside the volume.
+            </aside>
+          </section>
+          <section data-background="#282a36">
+            <h2>U-Shaped Retrieval Curve</h2>
+            <div class="ascii-curve">Accuracy
+  ^
+  |  ████████\                          /████████
+  |          \                        /
+  |           \                      /
+  |            \____  Meh Valley ___/
+  |                 \              /
+  +------------------------------------------------> Position in context
+    Beginning                                End</div>
+            <aside class="notes">
+              This is the intuition pump: front and back matter more than middle.
+            </aside>
+          </section>
+          <section data-background="#282a36">
+            <h2>Implications</h2>
+            <ul class="tight small">
+              <li class="fragment">Keep context small and relevant</li>
+              <li class="fragment">Front-load long reference data, then restate instructions at the <strong>end</strong></li>
+              <li class="fragment">Anthropic guidance reports up to <strong>30% improvement</strong> from long-context structure</li>
+              <li class="fragment">Chunk, summarize, and re-anchor aggressively</li>
+            </ul>
+            <aside class="notes">
+              The action item is structural discipline, not blind maximization of tokens.
+            </aside>
+          </section>
+        </section>
+
+        <section>
+          <section data-background="#44475a">
+            <h2>The Goldilocks Approach</h2>
+            <p class="emphasis">Not too little. Not too much. Just enough structure, context, and guidance.</p>
+            <aside class="notes">
+              This section turns research into prompt and workflow heuristics.
+            </aside>
+          </section>
+          <section data-background="#282a36">
+            <h2>Same Task, More Tokens</h2>
+            <div class="panel small">
+              <p><strong>Levy et al., ACL 2024</strong> — effective reasoning often peaks at roughly <strong>50–70% of max context</strong>.</p>
+              <p>More tokens can increase distraction, contradiction, and retrieval failures.</p>
+            </div>
+            <aside class="notes">
+              Bigger input is not free capacity; it can become cognitive interference.
+            </aside>
+          </section>
+          <section data-background="#282a36">
+            <h2>Mimic the Training Set</h2>
+            <ul class="tight small">
+              <li class="fragment">Use Markdown for readable hierarchy</li>
+              <li class="fragment">Use XML tags for explicit boundaries</li>
+              <li class="fragment">Use few-shot examples for pattern completion</li>
+              <li class="fragment">Show the shape of the output you want</li>
+            </ul>
+            <aside class="notes">
+              Language models like familiar structure; make the task look like examples they have seen before.
+            </aside>
+          </section>
+          <section data-background="#282a36">
+            <h2>Anthropic Best Practices</h2>
+            <ol class="tight xsmall">
+              <li><strong>Golden Rule:</strong> <span class="quote">"Show your prompt to a colleague..."</span></li>
+              <li><strong>Long Context Structure:</strong> <span class="quote">"Put longform data at the top... up to 30%"</span></li>
+              <li><strong>XML Tags:</strong> <span class="quote">"XML tags help Claude parse complex prompts unambiguously..."</span></li>
+              <li><strong>Ground in Quotes:</strong> <span class="quote">"For long document tasks, ask Claude to quote relevant parts..."</span></li>
+              <li><strong>Give Context/Motivation:</strong> <span class="quote">"Providing context or motivation... helps Claude better understand..."</span></li>
+              <li><strong>Persona/Role:</strong> <span class="quote">"Setting a role in the system prompt focuses Claude's behavior..."</span></li>
+              <li><strong>Literal Instruction Following (Opus 4.7):</strong> <span class="quote">"interprets prompts more literally..."</span></li>
+              <li><strong>Effort Levels:</strong> <span class="quote">"Start with the new xhigh effort level for coding..."</span></li>
+            </ol>
+            <aside class="notes">
+              These are simple but operationally powerful defaults for prompt and workflow design.
+            </aside>
+          </section>
+          <section data-background="#282a36">
+            <h2>Research Quotes That Matter</h2>
+            <ol class="tight xsmall">
+              <li><strong>Lost in the Middle</strong> (Liu et al., 2023): <span class="quote">"Performance is highest when relevant information appears at the very beginning or very end..."</span></li>
+              <li><strong>Same Task More Tokens</strong> (Levy et al., 2024): <span class="quote">"Our findings show a notable degradation..."</span></li>
+              <li><strong>Chain-of-Thought</strong> (Wei et al., NeurIPS 2022): <span class="quote">"Let's think step by step"</span> → 17.7% to 78.7%</li>
+              <li><strong>Zero-Shot Reasoners</strong> (Kojima et al., 2022): <span class="quote">"LLMs are decent zero-shot reasoners..."</span></li>
+              <li><strong>Google Gemini</strong>: <span class="quote">"We recommend to always include few-shot examples..."</span></li>
+            </ol>
+            <aside class="notes">
+              The pattern across papers is remarkably consistent: structure helps, examples help, placement matters.
+            </aside>
+          </section>
+          <section data-background="#282a36">
+            <h2>Using Different Models</h2>
+            <p><strong>Cognitive diversity &gt; single-model reasoning.</strong></p>
+            <p class="small">Planning, implementation, review, and validation do not require the same strengths.</p>
+            <aside class="notes">
+              This is where orchestration beats hero-model thinking.
+            </aside>
+          </section>
+          <section data-background="#282a36">
+            <h2>Multi-Model Debate</h2>
+            <div class="panel small">
+              <p>Diverse models debating and critiquing one another reached <strong>91%</strong> on GSM-8K in reported research settings.</p>
+              <p>Independent failures are easier to catch than self-consistent failures.</p>
+            </div>
+            <aside class="notes">
+              The main idea is error decorrelation: different models miss different things.
+            </aside>
+          </section>
+          <section data-background="#282a36">
+            <h2>Why Different Models Help</h2>
+            <ul class="tight small">
+              <li class="fragment">Different blind spots</li>
+              <li class="fragment">Different training mixtures</li>
+              <li class="fragment">Different architecture biases surface different perspectives</li>
+              <li class="fragment">Review gets stronger when it is not performed by the same mindset that built the code</li>
+            </ul>
+            <aside class="notes">
+              You are not only buying more intelligence; you are buying a different angle of attack.
+            </aside>
+          </section>
+          <section data-background="#282a36">
+            <h2>Practical Model Allocation</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Stage</th>
+                  <th>Model Choice</th>
+                  <th>Why</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Planning</td>
+                  <td>Opus</td>
+                  <td>Complex analysis</td>
+                </tr>
+                <tr>
+                  <td>Code search</td>
+                  <td>Sonnet (parallel)</td>
+                  <td>Speed</td>
+                </tr>
+                <tr>
+                  <td>Building</td>
+                  <td>Sonnet/Opus hybrid</td>
+                  <td>Fast iteration + complex reasoning</td>
+                </tr>
+                <tr>
+                  <td>Review</td>
+                  <td>Different provider</td>
+                  <td>Different blind spots</td>
+                </tr>
+                <tr>
+                  <td>Spec validation</td>
+                  <td>Opus 4.5 ultrathink</td>
+                  <td>Catch inconsistencies</td>
+                </tr>
+              </tbody>
+            </table>
+            <aside class="notes">
+              This table is a deployment guide, not a benchmark fight.
+            </aside>
+          </section>
+        </section>
+
+        <section>
+          <section data-background="#44475a">
+            <h2>The Ralph Loop: Bash-Driven Agent Cycling</h2>
+            <p>Automate planning, building, checking, and retrying until the work is actually complete.</p>
+            <aside class="notes">
+              Now tie all the concepts together in one operational loop.
+            </aside>
+          </section>
+          <section data-background="#282a36">
+            <h2>Core Loop Snippet</h2>
+            <pre><code class="language-bash" data-trim>
+OUTPUT=$(copilot \
+    --allow-all-tools \
+    --model claude-opus-4.6 \
+    -p "$PROMPT_CONTENT" 2>&1 | tee /dev/stderr)
+
+git push origin "$CURRENT_BRANCH"
+
+if echo "$OUTPUT" | grep -q "$COMPLETION_PROMISE"; then
+    echo "✓ Completion promise found"
+    break
+fi
+            </code></pre>
+            <aside class="notes">
+              This pattern lets the shell own persistence while the model owns local reasoning.
+            </aside>
+          </section>
+          <section data-background="#282a36">
+            <h2>Two Modes</h2>
+            <div class="two-col small">
+              <div class="panel">
+                <h3><code>./loop.sh -m plan</code></h3>
+                <p>Research, decompose, assign sub-agents, create a spec.</p>
+              </div>
+              <div class="panel">
+                <h3><code>./loop.sh -m build</code></h3>
+                <p>Implement, validate, review, fix, and retry until exit criteria are met.</p>
+              </div>
+            </div>
+            <aside class="notes">
+              Split thinking mode from execution mode to keep each prompt sharper.
+            </aside>
+          </section>
+          <section data-background="#282a36">
+            <h2>Build Prompt: Key Elements</h2>
+            <ol class="tight small">
+              <li class="fragment">Precise task statement</li>
+              <li class="fragment">Repository and environment context</li>
+              <li class="fragment">Required validation commands</li>
+              <li class="fragment">Completion criteria and promise phrase</li>
+              <li class="fragment">Permission boundaries / tool policy</li>
+              <li class="fragment">Instructions for iteration after failure</li>
+            </ol>
+            <aside class="notes">
+              The completion promise is important because it creates a machine-detectable success contract.
+            </aside>
+          </section>
+          <section data-background="#282a36">
+            <h2>Why This Uses Every Best Practice</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Practice</th>
+                  <th>How the loop uses it</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td>Persona</td><td>Separate planning and building mindsets</td></tr>
+                <tr><td>Persistent prompts</td><td>Stored in agents and skills</td></tr>
+                <tr><td>Deterministic tools</td><td>Shell commands, git, tests</td></tr>
+                <tr><td>Context control</td><td>Re-anchor each cycle with fresh prompt content</td></tr>
+                <tr><td>Validation</td><td>Run scripted checks before exit</td></tr>
+                <tr><td>Completion detection</td><td>Machine-readable promise phrase</td></tr>
+                <tr><td>Retry loop</td><td>Shell repeats until conditions are met</td></tr>
+                <tr><td>Observability</td><td>Streams output to terminal and git history</td></tr>
+                <tr><td>Tool richness</td><td>Anything callable becomes part of the workflow</td></tr>
+                <tr><td>Cost control</td><td>Small, structured prompts per cycle</td></tr>
+              </tbody>
+            </table>
+            <aside class="notes">
+              This is where the talk comes together: the loop operationalizes the whole framework.
+            </aside>
+          </section>
+          <section data-background="#282a36">
+            <h2>Elegant Insight</h2>
+            <ul class="tight small">
+              <li class="fragment">Clear context each run</li>
+              <li class="fragment">Re-anchor every step</li>
+              <li class="fragment">Persistent files beat fragile conversational memory</li>
+              <li class="fragment">Bash provides the durable outer state machine</li>
+            </ul>
+            <aside class="notes">
+              The shell is the boring hero: it gives persistence, branching, and completion semantics.
+            </aside>
+          </section>
+        </section>
+
+        <section>
+          <section data-background="#44475a">
+            <h2>Agentic SDLC</h2>
+            <ol class="tight small">
+              <li>Clarify the problem</li>
+              <li>Gather repository context</li>
+              <li>Create a plan</li>
+              <li>Review the plan</li>
+              <li>Assign implementation work</li>
+              <li>Write code</li>
+              <li>Run deterministic validation</li>
+              <li>Perform browser / system checks</li>
+              <li>Review with a different agent or model</li>
+              <li>Fix discovered issues</li>
+              <li>Commit and ship</li>
+            </ol>
+            <aside class="notes">
+              This is the workflow view: many agents, many checks, one delivery pipeline.
+            </aside>
+          </section>
+          <section data-background="#282a36">
+            <h2>Key Principle</h2>
+            <p><strong>Use multiple agents, with deterministic validation between steps.</strong></p>
+            <p class="small">Do not trust a single completion message. Trust reproducible checks, layered review, and explicit exit criteria.</p>
+            <aside class="notes">
+              End the instructional content on the reliability principle.
+            </aside>
+          </section>
+        </section>
+
+        <section>
+          <section data-background="#44475a">
+            <h1>Thank You</h1>
+            <p>Questions?</p>
+            <div class="pill-row">
+              <span class="pill">Agents</span>
+              <span class="pill">Skills</span>
+              <span class="pill">Tools</span>
+              <span class="pill">Validation</span>
+            </div>
+            <aside class="notes">
+              Close by reinforcing that the goal is not smarter prompts alone; it is better systems around the model.
+            </aside>
+          </section>
+        </section>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+    <script src="node_modules/reveal.js/dist/reveal.js"></script>
+    <script src="node_modules/reveal.js/dist/plugin/highlight.js"></script>
+    <script src="node_modules/reveal.js/dist/plugin/notes.js"></script>
+    <script src="node_modules/reveal.js/dist/plugin/markdown.js"></script>
+    <script>
+      const personaData = {
+        security: {
+          label: "Security Engineer",
+          clusters: {
+            identity: { label: "Identity & Trust", color: "#ff79c6" },
+            hygiene: { label: "Defensive Coding", color: "#8be9fd" },
+            resilience: { label: "Operational Resilience", color: "#50fa7b" },
+            governance: { label: "Governance & Practice", color: "#bd93f9" }
+          },
+          points: [
+            { concept: "Authentication", x: 44, y: 38, cluster: "identity" },
+            { concept: "Access Control", x: 52, y: 40, cluster: "identity" },
+            { concept: "Encryption", x: 48, y: 50, cluster: "identity" },
+            { concept: "Input Sanitization", x: 30, y: 45, cluster: "hygiene" },
+            { concept: "Data Validation", x: 26, y: 56, cluster: "hygiene" },
+            { concept: "Error Handling", x: 34, y: 64, cluster: "hygiene" },
+            { concept: "Logging", x: 63, y: 58, cluster: "resilience" },
+            { concept: "Monitoring", x: 72, y: 54, cluster: "resilience" },
+            { concept: "Performance", x: 79, y: 62, cluster: "resilience" },
+            { concept: "Testing", x: 58, y: 72, cluster: "governance" },
+            { concept: "Code Review", x: 49, y: 78, cluster: "governance" },
+            { concept: "Documentation", x: 40, y: 71, cluster: "governance" },
+            { concept: "API Design", x: 68, y: 33, cluster: "identity" }
+          ]
+        },
+        developer: {
+          label: "Developer",
+          clusters: {
+            delivery: { label: "Delivery Core", color: "#8be9fd" },
+            quality: { label: "Quality Loop", color: "#50fa7b" },
+            operations: { label: "Ops Signals", color: "#ffb86c" },
+            security: { label: "Security Surface", color: "#ff79c6" }
+          },
+          points: [
+            { concept: "API Design", x: 43, y: 34, cluster: "delivery" },
+            { concept: "Performance", x: 55, y: 33, cluster: "delivery" },
+            { concept: "Error Handling", x: 47, y: 46, cluster: "delivery" },
+            { concept: "Testing", x: 36, y: 58, cluster: "quality" },
+            { concept: "Code Review", x: 48, y: 63, cluster: "quality" },
+            { concept: "Documentation", x: 29, y: 70, cluster: "quality" },
+            { concept: "Logging", x: 69, y: 49, cluster: "operations" },
+            { concept: "Monitoring", x: 77, y: 58, cluster: "operations" },
+            { concept: "Data Validation", x: 61, y: 46, cluster: "operations" },
+            { concept: "Authentication", x: 24, y: 34, cluster: "security" },
+            { concept: "Access Control", x: 18, y: 44, cluster: "security" },
+            { concept: "Encryption", x: 20, y: 56, cluster: "security" },
+            { concept: "Input Sanitization", x: 31, y: 47, cluster: "security" }
+          ]
+        },
+        product: {
+          label: "Product Manager",
+          clusters: {
+            value: { label: "User Value", color: "#ffb86c" },
+            reliability: { label: "Reliability", color: "#50fa7b" },
+            risk: { label: "Risk", color: "#ff79c6" },
+            enablement: { label: "Team Enablement", color: "#bd93f9" }
+          },
+          points: [
+            { concept: "API Design", x: 48, y: 32, cluster: "value" },
+            { concept: "Performance", x: 58, y: 37, cluster: "value" },
+            { concept: "Documentation", x: 38, y: 41, cluster: "value" },
+            { concept: "Monitoring", x: 70, y: 46, cluster: "reliability" },
+            { concept: "Logging", x: 63, y: 55, cluster: "reliability" },
+            { concept: "Error Handling", x: 56, y: 52, cluster: "reliability" },
+            { concept: "Authentication", x: 22, y: 43, cluster: "risk" },
+            { concept: "Access Control", x: 18, y: 54, cluster: "risk" },
+            { concept: "Encryption", x: 25, y: 62, cluster: "risk" },
+            { concept: "Testing", x: 46, y: 68, cluster: "enablement" },
+            { concept: "Code Review", x: 55, y: 73, cluster: "enablement" },
+            { concept: "Data Validation", x: 66, y: 67, cluster: "enablement" },
+            { concept: "Input Sanitization", x: 34, y: 58, cluster: "risk" }
+          ]
+        },
+        educator: {
+          label: "Educator",
+          clusters: {
+            foundations: { label: "Foundations", color: "#8be9fd" },
+            safe: { label: "Safe Practice", color: "#50fa7b" },
+            production: { label: "Production Thinking", color: "#ffb86c" },
+            communication: { label: "Communication", color: "#bd93f9" }
+          },
+          points: [
+            { concept: "Authentication", x: 31, y: 36, cluster: "foundations" },
+            { concept: "API Design", x: 44, y: 36, cluster: "foundations" },
+            { concept: "Data Validation", x: 37, y: 48, cluster: "foundations" },
+            { concept: "Input Sanitization", x: 24, y: 58, cluster: "safe" },
+            { concept: "Access Control", x: 32, y: 63, cluster: "safe" },
+            { concept: "Encryption", x: 22, y: 72, cluster: "safe" },
+            { concept: "Error Handling", x: 59, y: 47, cluster: "production" },
+            { concept: "Logging", x: 70, y: 46, cluster: "production" },
+            { concept: "Monitoring", x: 76, y: 57, cluster: "production" },
+            { concept: "Performance", x: 67, y: 34, cluster: "production" },
+            { concept: "Testing", x: 52, y: 69, cluster: "communication" },
+            { concept: "Code Review", x: 61, y: 77, cluster: "communication" },
+            { concept: "Documentation", x: 43, y: 79, cluster: "communication" }
+          ]
+        }
+      };
+
+      let personaVizInitialized = false;
+      let currentPersona = "security";
+      let svg;
+      let hullLayer;
+      let pointLayer;
+      let labelLayer;
+      let clusterLabelLayer;
+      let tooltip;
+      let xScale;
+      let yScale;
+
+      function paddedHull(points, pad = 16) {
+        const hull = d3.polygonHull(points);
+        if (!hull) return null;
+        const centroid = [
+          d3.mean(hull, (d) => d[0]),
+          d3.mean(hull, (d) => d[1])
+        ];
+        return hull.map(([x, y]) => {
+          const dx = x - centroid[0];
+          const dy = y - centroid[1];
+          const length = Math.sqrt(dx * dx + dy * dy) || 1;
+          return [x + (dx / length) * pad, y + (dy / length) * pad];
+        });
+      }
+
+      function legendFor(personaKey) {
+        const legend = document.getElementById("cluster-legend");
+        legend.innerHTML = "";
+        Object.values(personaData[personaKey].clusters).forEach((cluster) => {
+          const el = document.createElement("span");
+          el.textContent = cluster.label;
+          el.style.background = `${cluster.color}22`;
+          el.style.color = cluster.color;
+          legend.appendChild(el);
+        });
+      }
+
+      function ensurePersonaViz() {
+        const container = document.getElementById("persona-viz");
+        if (!container || personaVizInitialized) return;
+
+        const width = container.clientWidth || 960;
+        const height = 540;
+        tooltip = d3.select("#persona-tooltip");
+        xScale = d3.scaleLinear().domain([0, 100]).range([45, width - 45]);
+        yScale = d3.scaleLinear().domain([0, 100]).range([height - 35, 35]);
+
+        svg = d3
+          .select(container)
+          .append("svg")
+          .attr("viewBox", `0 0 ${width} ${height}`)
+          .attr("width", "100%")
+          .attr("height", height)
+          .style("display", "block");
+
+        svg.append("rect").attr("width", width).attr("height", height).attr("fill", "#0d1117");
+
+        const grid = svg.append("g").attr("opacity", 0.14);
+        d3.range(10, 100, 20).forEach((tick) => {
+          grid
+            .append("line")
+            .attr("x1", xScale(tick))
+            .attr("x2", xScale(tick))
+            .attr("y1", 24)
+            .attr("y2", height - 24)
+            .attr("stroke", "#8b949e");
+          grid
+            .append("line")
+            .attr("x1", 24)
+            .attr("x2", width - 24)
+            .attr("y1", yScale(tick))
+            .attr("y2", yScale(tick))
+            .attr("stroke", "#8b949e");
+        });
+
+        svg
+          .append("text")
+          .attr("x", 30)
+          .attr("y", 28)
+          .attr("fill", "#8be9fd")
+          .attr("font-size", 14)
+          .text("Latent priority / conceptual proximity map");
+
+        hullLayer = svg.append("g");
+        clusterLabelLayer = svg.append("g");
+        pointLayer = svg.append("g");
+        labelLayer = svg.append("g");
+
+        personaVizInitialized = true;
+        switchPersona(currentPersona);
+      }
+
+      function switchPersona(personaKey) {
+        currentPersona = personaKey;
+        document.querySelectorAll(".persona-btn").forEach((btn) => {
+          btn.classList.toggle("active", btn.dataset.persona === personaKey);
+        });
+
+        if (!personaVizInitialized) {
+          ensurePersonaViz();
+          return;
+        }
+
+        const persona = personaData[personaKey];
+        const points = persona.points.map((point) => ({
+          ...point,
+          sx: xScale(point.x),
+          sy: yScale(point.y),
+          clusterLabel: persona.clusters[point.cluster].label,
+          color: persona.clusters[point.cluster].color
+        }));
+
+        const clusterEntries = Object.entries(persona.clusters).map(([key, meta]) => {
+          const clusterPoints = points.filter((point) => point.cluster === key);
+          const hull = paddedHull(clusterPoints.map((point) => [point.sx, point.sy]), 18);
+          return {
+            key,
+            label: meta.label,
+            color: meta.color,
+            hull,
+            cx: d3.mean(clusterPoints, (d) => d.sx),
+            cy: d3.mean(clusterPoints, (d) => d.sy)
+          };
+        });
+
+        const hulls = hullLayer.selectAll("path").data(clusterEntries, (d) => d.key);
+        hulls
+          .join(
+            (enter) =>
+              enter
+                .append("path")
+                .attr("fill", (d) => `${d.color}22`)
+                .attr("stroke", (d) => d.color)
+                .attr("stroke-width", 2)
+                .attr("d", (d) => (d.hull ? `M${d.hull.join("L")}Z` : null))
+                .attr("opacity", 0)
+                .call((enter) => enter.transition().duration(800).attr("opacity", 1)),
+            (update) =>
+              update.call((update) =>
+                update
+                  .transition()
+                  .duration(800)
+                  .attr("fill", (d) => `${d.color}22`)
+                  .attr("stroke", (d) => d.color)
+                  .attr("d", (d) => (d.hull ? `M${d.hull.join("L")}Z` : null))
+              ),
+            (exit) => exit.call((exit) => exit.transition().duration(300).attr("opacity", 0).remove())
+          );
+
+        const clusterLabels = clusterLabelLayer.selectAll("text").data(clusterEntries, (d) => d.key);
+        clusterLabels
+          .join(
+            (enter) =>
+              enter
+                .append("text")
+                .attr("x", (d) => d.cx)
+                .attr("y", (d) => d.cy)
+                .attr("text-anchor", "middle")
+                .attr("fill", (d) => d.color)
+                .attr("font-size", 13)
+                .attr("font-weight", 700)
+                .attr("opacity", 0)
+                .text((d) => d.label)
+                .call((enter) => enter.transition().duration(800).attr("opacity", 0.92)),
+            (update) =>
+              update.call((update) =>
+                update
+                  .transition()
+                  .duration(800)
+                  .attr("x", (d) => d.cx)
+                  .attr("y", (d) => d.cy)
+                  .attr("fill", (d) => d.color)
+                  .text((d) => d.label)
+              ),
+            (exit) => exit.remove()
+          );
+
+        const pointGroups = pointLayer.selectAll("g.point").data(points, (d) => d.concept);
+        const enteredGroups = pointGroups
+          .enter()
+          .append("g")
+          .attr("class", "point")
+          .style("cursor", "pointer")
+          .on("mousemove", (event, d) => {
+            tooltip
+              .style("opacity", 1)
+              .style("left", `${event.offsetX + 16}px`)
+              .style("top", `${event.offsetY + 16}px`)
+              .html(`<strong>${d.concept}</strong><br>${d.clusterLabel}`);
+          })
+          .on("mouseleave", () => tooltip.style("opacity", 0));
+
+        enteredGroups
+          .append("circle")
+          .attr("r", 0)
+          .attr("fill", (d) => d.color)
+          .attr("stroke", "#f8f8f2")
+          .attr("stroke-width", 1.5)
+          .transition()
+          .duration(800)
+          .attr("r", 9);
+
+        enteredGroups
+          .append("text")
+          .attr("text-anchor", "middle")
+          .attr("dy", -14)
+          .attr("fill", "#e6edf3")
+          .attr("font-size", 11)
+          .text((d) => d.concept);
+
+        const mergedGroups = enteredGroups.merge(pointGroups);
+        mergedGroups
+          .transition()
+          .duration(800)
+          .attr("transform", (d) => `translate(${d.sx},${d.sy})`);
+
+        mergedGroups
+          .select("circle")
+          .transition()
+          .duration(800)
+          .attr("fill", (d) => d.color)
+          .attr("r", 9);
+
+        mergedGroups.select("text").text((d) => d.concept);
+        pointGroups.exit().remove();
+        legendFor(personaKey);
+      }
+
+      Reveal.initialize({
+        hash: true,
+        slideNumber: true,
+        controls: true,
+        progress: true,
+        center: true,
+        transition: "slide",
+        plugins: [RevealHighlight, RevealNotes, RevealMarkdown]
+      });
+
+      Reveal.on("ready", ensurePersonaViz);
+      Reveal.on("slidechanged", (event) => {
+        if (event.currentSlide && event.currentSlide.querySelector("#persona-viz")) {
+          ensurePersonaViz();
+          switchPersona(currentPersona);
+        }
+      });
+    </script>
+  </body>
+</html>

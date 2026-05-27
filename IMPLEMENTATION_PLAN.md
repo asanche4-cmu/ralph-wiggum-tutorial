@@ -2,205 +2,159 @@
 
 ## Status
 
-> **Implementation Status: ~90% Complete — Quick Start fully implemented**
+> **Overall: ~40% Complete — Infrastructure done, presentation content unimplemented**
 
-### Summary
-**All Quick Start Steps (1-4) are complete.** The application is fully functional with:
-- ✅ Flask backend with models, views, and templates
-- ✅ React Islands frontend with Vite and Tailwind
-- ✅ All development scripts (bootstrap, setup, server, test, lint, typecheck)
-- ✅ Python tests and pre-commit hooks
-- ✅ GitHub Actions CI/CD pipeline
-
-| Area | Status | Details |
-|------|--------|---------|
-| `src/` | ✅ Complete | Flask app, models, views, templates, errors, logging, schemas, controllers |
-| `frontend/` | ✅ Complete | React Islands, Vite, TypeScript, Tailwind, ESLint, Vitest |
-| `scripts/` | ✅ Complete | bootstrap, setup, server, test, lint, typecheck, update, console, db-seed, Procfile |
-| `tests/` | ✅ Complete | conftest.py, test_hello.py, vitest setup |
-| `.devcontainer/` | ✅ Complete | Python 3.12, PostgreSQL, Node.js with post-create hook |
-| Config files | ✅ Complete | `.gitignore`, `.env.example`, `requirements.txt`, `pyproject.toml`, `eslint.config.js` |
-| `.pre-commit-config.yaml` | ✅ Complete | Pre-commit hooks for Python and TypeScript |
-| `.github/workflows/` | ✅ Complete | CI pipeline for lint, typecheck, test |
-| `AGENTS.md` | ⏳ In progress | Being updated with build/run/test commands |
-| `README.md` | ⏳ In progress | Being updated with project overview and setup |
-| `migrations/` | ⏸️ Pending | Requires `flask db init` (not needed for quick start without actual schema changes) |
+The Flask/React backend infrastructure is fully operational (all 12 backend + 4 frontend tests pass). The **primary deliverable** — a 46+ slide reveal.js presentation on "Getting Good LLM Results" (per `specs/specs.md`) — is currently a 3-slide placeholder in `presentation/index.html`.
 
 ---
 
-## Quick Start Implementation Order
+## 🔴 PRIORITY ITEMS (Not Yet Implemented)
 
-✅ **All items below are COMPLETE.** The hello-world app is fully functional with Flask serving a page containing a mounted React island.
+### P0-A: Presentation Slides — Sections 1–9 (Slides 1–25)
 
-### ✅ Step 1 — Environment Foundation (Phase 1.1–1.3) COMPLETE
-- ✅ `.devcontainer/devcontainer.json` + post-create.sh
-- ✅ `.gitignore`
-- ✅ `.env.example`
+Replace the 3 placeholder slides with proper spec content. Build as `<section>` groups with vertical nesting per spec.
 
-**Validated:** Container builds, env vars load successfully.
+- **Section 1: Title + Agenda** (Slides 1–2)
+  - Title: "Getting Good LLM Results", subtitle: "A practical guide to agentic AI development"
+  - Agenda bullets: Context Window, The Right Tool, Determinism + Non-Determinism, Ensuring Completion
+- **Section 2: Long Running AI Work Types** (Slides 3–4)
+  - Title: "What do agents do all day?"
+  - List with icons: Building, Debugging, Testing, Validation, Performance
+- **Section 3: Agents Intro** (Slides 5–8)
+  - Definition of agents
+  - Code block: `.github/agents/plan-agent.md` frontmatter + key sections (file exists, 105 lines)
+  - Our agents list: plan-agent, plan-reviewer
+  - Principles: never write a prompt twice, keep small/focused, don't aim for exact, like experts
+- **Section 4: Vector Spaces & Agent Focus** (Slides 9–12)
+  - Research citations: Kong et al. NAACL 2024, Xu et al. 2023, Salewski et al. NeurIPS 2023, Zou et al. 2023
+  - Mechanism causal chain diagram (text-based flow)
+  - Anthropic proof: Scaling Monosemanticity May 2024, Arditi et al. 2024
+- **Section 5: Skills Intro** (Slides 14–18)
+  - Definition of skills
+  - Code block: `.github/skills/git-commit/SKILL.md` (file exists, 189 lines)
+  - Code block: python-code-simplifier deterministic commands (file exists, 63 lines)
+  - All 4 skills listed
+  - Abstraction diagram: Agent + Skill + Tools = Full-service prompt
+- **Section 6: Mixing Determinism & Non-Determinism** (Slides 19–20)
+  - Skills/agents = vague (non-deterministic), tasks = exact tools (deterministic)
+  - Even experts use tools — give AI tools
+- **Section 7: Environment Abilities** (Slide 21)
+  - CLI = full service, ⚠️ dangerous without sandbox
+- **Section 8: Hooks** (Slides 22–23)
+  - Determinism in agent lifecycle
+  - Examples: linters, security agents, chain validation
+- **Section 9: The CLI** (Slides 24–25)
+  - Most dev tools offer CLI, combine with shell tools, SDKs, frameworks
 
-### ✅ Step 2 — Python Backend Core (Phase 2.1–2.3, 2.8–2.9) COMPLETE
-- ✅ `requirements.txt`, `requirements-dev.txt`, `pyproject.toml`
-- ✅ `src/app/__init__.py` (app factory), `src/app/config.py`
-- ✅ `src/app/models/base.py`, `src/app/models/hello.py`, `src/app/models/__init__.py`
-- ✅ `src/app/views/__init__.py`, `src/app/views/hello.py`
-- ✅ `src/app/templates/base.html`, `src/app/templates/hello/index.html`
-- ✅ `src/app/logging_config.py` (Phase 2.4)
-- ✅ `src/app/errors.py` + error templates (Phase 2.5)
-- ✅ `src/app/schemas/hello.py` (Phase 2.6)
-- ✅ `src/app/controllers/hello.py` (Phase 2.7)
-- ✅ `src/app/static/` directory setup (Phase 2.10)
+### P0-B: Presentation Slides — Sections 10–17 (Slides 26–46)
 
-**Validated:** `python -c "from app import create_app; create_app()"` works, `curl http://localhost:5000/` returns HTML.
+- **Section 10: The Crack Down** (Slide 26)
+  - Token cost crackdown, caching, "get rate limited every day"
+- **Section 11: Giving Your Agent Tools** (Slides 27–29)
+  - Tools list: Linters, Test tools, Playwright, HAR, Flame graphs, Memory profilers, Logging, Write your own
+  - Code example: `.vscode/mcp.json` (file exists, 11 lines)
+  - Key insight: "If an agent can see it, it can use it"
+- **Section 12: Context Window** (Slide 30)
+  - "Your best friend and worst enemy"
+- **Section 13: Valley of Meh** (Slides 31–34)
+  - Context sizes table (Claude 1M, GPT-4o 128K, Gemini 1M)
+  - "Lost in the Middle" U-shaped curve diagram
+  - Implications: keep context small, put instructions at END (30% improvement)
+- **Section 14: Goldilocks Approach** (Slides 35–37g)
+  - "Same Task More Tokens" research (Levy et al. ACL 2024)
+  - Mimic training set: Markdown, XML tags, few-shot
+  - Anthropic best practices: 8 quoted principles (exact quotes in spec)
+  - Research quotes: 5 citations with exact quotes
+  - Diversity of thought: multi-model debate research + practical table (plan=Opus, search=Sonnet, review=different provider)
+- **Section 15: Ralph Loop** (Slides 38–43)
+  - Show `loop.sh` overview (file exists, 117 lines)
+  - Core loop code snippet (copilot invocation + git push + completion check)
+  - Two modes: plan vs build
+  - Build prompt key elements from `PROMPT_build.md` (file exists, 21 lines)
+  - "Why this uses every best practice" 10-row table
+  - Elegant insight: clear context window, re-anchor every step, persistent files
+- **Section 16: Agentic SDLC** (Slides 44–45)
+  - 11-step numbered list
+  - Key principle: multiple agents, deterministic validation between steps
+- **Section 17: Closing** (Slide 46)
+  - Thank You / Questions
 
-### ✅ Step 3 — React Islands Frontend (Phase 4.1, 4.3–4.4) COMPLETE
-- ✅ `frontend/package.json`, `frontend/tsconfig.json`, `frontend/vite.config.ts`
-- ✅ `frontend/tailwind.config.ts`, `frontend/postcss.config.js`
-- ✅ `frontend/eslint.config.js`
-- ✅ `frontend/src/styles/globals.css` with Tailwind (Phase 4.2)
-- ✅ `frontend/src/main.ts` (island registry), `frontend/src/types/index.ts`
-- ✅ `frontend/src/islands/hello/HelloIsland.tsx`, `frontend/src/islands/hello/index.ts`
-- ✅ `frontend/vitest.config.ts`, `frontend/tests/islands/hello/HelloIsland.test.tsx` (Phase 4.7)
+### P0-C: Interactive D3.js Visualization (Slide 13)
 
-**Validated:** `cd frontend && npm run build` produces assets, island mounts in browser.
+- Add D3 v7 via CDN (`cdn.jsdelivr.net/npm/d3@7`) — NOT currently in `presentation/package.json`
+- Full-slide embedded scatter plot with dark background (#0d1117)
+- 4 persona buttons: 🔐 Security Engineer | 💻 Developer | 📊 Product Manager | 🎓 Educator
+- 13 concept points with pre-computed 2D coordinates per persona
+- `switchPersona()` function with 800ms `d3-transition` animations
+- Convex hulls via `d3-polygon` for cluster boundaries
+- Tooltips on hover with concept name + cluster label
+- Dracula-compatible color scheme
 
-### ✅ Step 4 — Scripts & Runnable App (Phase 5.1–5.7) COMPLETE
-- ✅ `script/bootstrap`
-- ✅ `script/setup`
-- ✅ `script/server`
-- ✅ `script/test` (Phase 5.4)
-- ✅ `script/lint` (Phase 5.5)
-- ✅ `script/typecheck` (Phase 5.6)
-- ✅ `script/update`, `script/console`, `script/db-seed`, `Procfile` (Phase 5.7)
+### P1: Code Examples — Inline Content from Real Files
 
-**Validated:** `script/setup && script/server` starts Flask + Vite, hello island renders on `http://localhost:5000/`.
+All referenced files exist and are populated. Implementation means extracting key snippets and embedding as `<pre><code>` blocks with reveal.js highlight plugin:
 
-### Additional Completed Items
-- ✅ `tests/__init__.py`, `tests/conftest.py`, `tests/test_hello.py` (Phase 6.1 - Python tests)
-- ✅ `.pre-commit-config.yaml` (Phase 7.1 - Pre-commit hooks)
-- ✅ `.github/workflows/ci.yml` (Phase 8.1 - GitHub Actions CI)
+- Slide 6: `.github/agents/plan-agent.md` frontmatter + key sections
+- Slide 15: `.github/skills/git-commit/SKILL.md` YAML frontmatter + workflow
+- Slide 16: python-code-simplifier showing lint/mypy/test deterministic commands
+- Slide 28: `.vscode/mcp.json` Playwright MCP tool config
+- Slide 39: `loop.sh` core loop code snippet
+- Slide 41: `PROMPT_build.md` key elements summary
 
-### Remaining Items (~10%)
-- ⏳ **9.1 AGENTS.md Update** — Being done now (build/run/test commands)
-- ⏳ **9.2 README Update** — Being done now (project overview and setup)
-- ⏸️ **3.1 Database Migrations** — Flask-Migrate init + first migration (optional for quick start)
+### P2: Reveal.js Configuration & Polish
 
----
+- Add `data-background` colors for section title/divider slides
+- Proper vertical slide nesting (`<section><section>...</section></section>`)
+- Verify Highlight plugin renders code blocks with syntax highlighting (monokai theme already linked)
+- Speaker notes via `<aside class="notes">` for presenter guidance
 
-## ✅ COMPLETED PHASES (Detailed Summary)
+### P3: Cosmetic / Low Priority
 
-### Phase 1: Foundation (Environment & Configuration)
-**Status: ✅ 100% Complete**
-
-All environment setup complete:
-- `.devcontainer/devcontainer.json` — Python 3.12, PostgreSQL, Node.js
-- `.devcontainer/post-create.sh` — Runs setup script automatically
-- `.gitignore` — Configured for Python, Node.js, IDE, build artifacts
-- `.env.example` — Template with DATABASE_URL, FLASK_ENV, SECRET_KEY, FLASK_DEBUG
-
-### Phase 2: Python Backend Foundation
-**Status: ✅ 100% Complete**
-
-All backend code implemented:
-- `requirements.txt` & `requirements-dev.txt` — Flask, SQLAlchemy, Pydantic, pytest, mypy
-- `pyproject.toml` — Tool configurations (pytest, mypy, flake8)
-- `src/app/__init__.py` — App factory with extension initialization
-- `src/app/config.py` — Configuration classes (Dev/Prod/Test)
-- `src/app/models/` — Base model, Hello model with SQLAlchemy
-- `src/app/logging_config.py` — JSON in production, human-readable in development
-- `src/app/errors.py` — Error handlers returning JSON/HTML
-- `src/app/templates/errors/` — Error pages (400, 404, 500)
-- `src/app/schemas/hello.py` — Pydantic schemas for validation
-- `src/app/controllers/hello.py` — Business logic layer
-- `src/app/views/hello.py` — Flask blueprint with routes (GET /, GET/POST /api/hello)
-- `src/app/templates/` — Base template with Vite integration, Hello page with island mount
-- `src/app/static/` — Directory for Vite build output
-
-### Phase 3: Database Migrations
-**Status: ⏸️ Pending (Optional for Quick Start)**
-
-Database setup not yet initialized:
-- `migrations/` directory not yet created (requires `flask db init`)
-- Plan: Run migrations only when schema changes are needed
-
-### Phase 4: React Islands Frontend
-**Status: ✅ 100% Complete**
-
-All frontend code implemented:
-- `frontend/package.json` — Dependencies and scripts (dev, build, lint, typecheck, test)
-- `frontend/tsconfig.json` — TypeScript configuration
-- `frontend/vite.config.ts` — Vite build → `../src/app/static/`, manifest.json for production
-- `frontend/tailwind.config.ts` & `frontend/postcss.config.js` — Tailwind CSS setup
-- `frontend/eslint.config.js` — ESLint flat config for TypeScript
-- `frontend/src/styles/globals.css` — Tailwind imports
-- `frontend/src/main.ts` — Island registry with auto-mount logic
-- `frontend/src/types/index.ts` — Shared TypeScript types
-- `frontend/src/islands/hello/HelloIsland.tsx` — React component with API fetch
-- `frontend/src/islands/hello/index.ts` — Island mount logic
-- `frontend/vitest.config.ts` — Vitest configuration
-- `frontend/tests/islands/hello/HelloIsland.test.tsx` — Component tests
-
-### Phase 5: Scripts to Rule Them All
-**Status: ✅ 100% Complete**
-
-All operational scripts implemented:
-- `script/bootstrap` — Install dependencies
-- `script/setup` — Full environment setup (bootstrap, .env, DB init, pre-commit)
-- `script/server` — Start Flask + Vite servers (concurrent execution)
-- `script/test` — Run all tests (pytest + vitest)
-- `script/lint` — Run all linters (flake8 + eslint)
-- `script/typecheck` — Run type checkers (mypy + tsc)
-- `script/update` — Update dependencies
-- `script/console` — Flask shell
-- `script/db-seed` — Seed database with dev data
-- `Procfile` — Production server config
-
-### Phase 6: Testing Infrastructure
-**Status: ✅ 100% Complete**
-
-Python tests implemented:
-- `tests/__init__.py` — Test package marker
-- `tests/conftest.py` — Pytest fixtures (app, client, db)
-- `tests/test_hello.py` — Hello route tests
-
-### Phase 7: Pre-commit & Quality
-**Status: ✅ 100% Complete**
-
-Pre-commit hooks configured:
-- `.pre-commit-config.yaml` — Hooks for trailing whitespace, YAML validation, flake8, mypy, eslint
-
-### Phase 8: CI/CD
-**Status: ✅ 100% Complete**
-
-GitHub Actions pipeline implemented:
-- `.github/workflows/ci.yml` — Jobs for lint, typecheck, test with PostgreSQL service
+- Fix typo in folder name: `.github/skills/python-code-simiplifier/` → `python-code-simplifier/`
+  - Would require updating any references in specs and AGENTS.md
 
 ---
 
-## 📋 REMAINING ITEMS (~10%)
+## ✅ COMPLETED ITEMS
 
-### 9.1 AGENTS.md Update
-**Priority:** P1 (In Progress)
-**Status:** ⏳ Being updated now
+### Infrastructure (Flask/React App) — 100% Complete
+- ✅ `.devcontainer/` — Python 3.12, PostgreSQL, Node.js with post-create hook
+- ✅ `src/app/` — Flask app factory, models, views, templates, errors, logging, schemas, controllers
+- ✅ `frontend/` — React Islands, Vite, TypeScript, Tailwind, ESLint, Vitest
+- ✅ `scripts/` — bootstrap, setup, server, test, lint, typecheck, update, console, db-seed, Procfile
+- ✅ `tests/` — 12 backend tests passing (conftest.py, test_hello.py)
+- ✅ `frontend/tests/` — 4 frontend tests passing (HelloIsland.test.tsx)
+- ✅ `migrations/` — Alembic initialized with hello table migration
+- ✅ `.github/workflows/ci.yml` — CI pipeline
+- ✅ `.pre-commit-config.yaml` — Pre-commit hooks
+- ✅ Config files — `.gitignore`, `.env.example`, `requirements.txt`, `pyproject.toml`
 
-Files to create/update:
-- `AGENTS.md` — Build/run/test commands and codebase patterns
+### Documentation — Complete
+- ✅ `AGENTS.md` — Operational commands for build/run/test
+- ✅ `README.md` — Project overview, setup, loop explanation, tech stack
 
-### 9.2 README.md Update  
-**Priority:** P2 (In Progress)
-**Status:** ⏳ Being updated now
+### Presentation Skeleton — Complete
+- ✅ `presentation/package.json` — reveal.js ^6.0.1 dependency
+- ✅ `presentation/index.html` — Basic structure with Dracula theme, plugins loaded
+- ✅ Reveal.js + plugins installed in `presentation/node_modules/`
 
-Files to update:
-- `README.md` — Project overview, quick start, and development guide
-
-### 3.1 Database Migrations (Optional)
-**Priority:** P0 (Can defer)
-**Status:** ⏸️ Not needed for quick start
-
-When to do:
-- Run `flask db init` and `flask db migrate` when schema changes require persistence
-- Currently not required as all models are defined and in-memory SQLite works for testing
+### Ralph Loop Infrastructure — Complete
+- ✅ `loop.sh` — Fully functional (117 lines), modes, max iterations, completion promise
+- ✅ `PROMPT_plan.md` — Plan mode prompt (22 lines)
+- ✅ `PROMPT_build.md` — Build mode prompt (21 lines)
+- ✅ `.github/agents/plan-agent.md` — Plan agent definition (105 lines)
+- ✅ `.github/agents/plan-reviewer.md` — Plan reviewer definition (20 lines)
+- ✅ `.github/skills/` — All 4 skills defined (git-commit 189L, python-code-simiplifier 63L, test-in-browser 102L, typescript-code-simplifier 62L)
+- ✅ `.vscode/mcp.json` — Playwright MCP server config (11 lines)
 
 ---
 
-## Detailed Phase Reference (For Context)
+## Implementation Notes
+
+- **No `src/lib/` directory** — project uses `src/app/` as the backend module
+- **No TODO/FIXME/HACK markers** — codebase is clean
+- **All tests green** — 12 backend + 4 frontend, no skipped/flaky tests
+- **All files referenced in spec exist** — agents, skills, loop.sh, prompts all populated
+- **D3.js not yet added** — needs CDN link in presentation/index.html (not a package.json dep per spec)
+- **Presentation is the sole remaining deliverable** — all infrastructure work is done
+- **Recommended build order**: P0-A → P0-B → P1 (code examples integrate with slides as they're built) → P0-C (D3 viz is self-contained) → P2 (polish pass)

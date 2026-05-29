@@ -249,6 +249,19 @@
         transition: opacity 0.3s;
       }
 
+      #context-viz-controls .pill {
+        background: rgba(68, 71, 90, 0.7);
+        border: 1px solid rgba(248, 248, 242, 0.22);
+        color: var(--dracula-foreground);
+        transition: background 0.2s, border-color 0.2s;
+      }
+
+      #context-viz-controls .pill:hover {
+        background: var(--dracula-pink);
+        border-color: var(--dracula-pink);
+        color: #111;
+      }
+
       #persona-viz-wrap {
         width: 100%;
         min-height: 590px;
@@ -557,7 +570,7 @@ git --no-pager diff
             <h2>Our Skills</h2>
             <ul class="tight small">
               <li><code>git-commit</code> — AI-generated commits with git notes for reasoning</li>
-              <li><code>test-in-browser</code> — Playwright MCP browser testing workflow</li>
+              <li><code>test-in-browser</code> — Playwright browser testing workflow</li>
               <li><code>python-code-simplifier</code> — Refines Python code, runs lint/mypy/tests</li>
               <li><code>typescript-code-simplifier</code> — Refines TS code, runs lint/typecheck</li>
             </ul>
@@ -683,38 +696,35 @@ git --no-pager diff
         <section>
           <section data-background="#44475a">
             <h2>Find Every Programmatic Tool You Can</h2>
-            <p>APIs, CLIs, MCP servers, scripts, SDKs, browser drivers, database shells, linters, test runners.</p>
+            <p>APIs, CLIs, scripts, SDKs, browser drivers, database shells, linters, test runners.</p>
             <aside class="notes">
               Tool richness directly increases what the agent can verify and complete.
             </aside>
           </section>
           <section data-background="#282a36">
-            <h2>Tools + MCP Example</h2>
-            <div class="two-col">
-              <div>
-                <ul class="tight small">
-                  <li>Playwright MCP</li>
-                  <li>GitHub MCP</li>
-                  <li>Database CLIs</li>
-                  <li>Cloud vendor SDKs</li>
-                  <li>App-specific scripts</li>
-                </ul>
-              </div>
-              <div>
-                <pre><code class="language-json" data-trim>
-{
-  "servers": {
-    "playwright": {
-      "command": "npx",
-      "args": ["@playwright/mcp@latest", "--headless"]
-    }
-  }
-}
-                </code></pre>
-              </div>
+            <h2>⚠️ The MCP Tax on Your Context Window</h2>
+            <p class="small">Every MCP tool definition is injected into the prompt — <strong>before your actual task begins</strong>.</p>
+            <blockquote class="small">
+              "In common configurations, the 'startup cost' of defining available tools consumes 55,000 tokens before a single user query is processed."
+              <br /><em>— MMNTM Research, "The MCP Tax" (2025)</em>
+            </blockquote>
+            <blockquote class="small">
+              "Injecting all tool descriptions in a single prompt leads to excessive token usage and overwhelms the model's context window."
+              <br /><em>— Gan &amp; Sun, "RAG-MCP" (arXiv:2505.03275, 2025)</em>
+            </blockquote>
+            <aside class="notes">
+              MCP servers push all their tool schemas into context up front. This eats into the tokens available for your code, instructions, and reasoning. More tools = less room for actual work.
+            </aside>
+          </section>
+          <section data-background="#282a36">
+            <h2>Why Local Files Win</h2>
+            <div class="three-col small">
+              <div class="panel"><strong>Zero Token Overhead</strong><br />Custom instructions &amp; copilot-instructions.md load only what you define — no bloated schemas.</div>
+              <div class="panel"><strong>Deterministic Context</strong><br />You control exactly what the model sees. No redundant JSON schemas polluting the window.</div>
+              <div class="panel"><strong>Better Accuracy</strong><br />RAG-MCP research showed removing tool bloat <strong>tripled</strong> tool-selection accuracy (43% → 14% baseline).</div>
             </div>
             <aside class="notes">
-              The point is not just having tools, but exposing them in a machine-usable interface.
+              Local files (custom instructions, scripts, skill definitions) give you precise control over context without the schema tax. Keep tools lean and local.
             </aside>
           </section>
           <section data-background="#282a36">
@@ -775,25 +785,43 @@ git --no-pager diff
           </section>
           <section data-background="#282a36">
             <h2>The Valley of Meh</h2>
-            <p class="quote">"Lost in the Middle"</p>
-            <p>Too little context starves reasoning. Too much context dilutes relevance. The middle gets ignored.</p>
+            <p class="quote">"Lost in the Middle" — Liu et al., TACL 2023</p>
+            <p>Models attend to the <strong class="success">beginning</strong> and <strong class="success">end</strong> of context. The <strong class="warning">middle gets ignored</strong>.</p>
+            <p class="small">As agents work, the valley <em>grows</em> — swallowing your original intent.</p>
             <aside class="notes">
               Explain that the issue is not just volume; it is where relevant information sits inside the volume.
+              Liu et al. found >20% performance drop when relevant info is in the middle.
+              GPT-3.5 performed WORSE with context than without when the answer was in the middle position.
             </aside>
           </section>
-          <section data-background="#282a36">
-            <h2>U-Shaped Retrieval Curve</h2>
-            <div class="ascii-curve">Accuracy
-  ^
-  |  ████████\                          /████████
-  |          \                        /
-  |           \                      /
-  |            \____  Meh Valley ___/
-  |                 \              /
-  +------------------------------------------------> Position in context
-    Beginning                                End</div>
+          <section data-background="#1a1a2e">
+            <h2>Context Window Growth</h2>
+            <div id="context-viz" style="width:100%;height:520px;position:relative;"></div>
+            <div id="context-viz-controls" style="display:flex;gap:0.6rem;justify-content:center;margin-top:0.4rem;">
+              <button id="ctx-prev" class="pill" style="cursor:pointer;font-size:0.5em;">◀ Prev</button>
+              <button id="ctx-play" class="pill" style="cursor:pointer;font-size:0.5em;">▶ Play</button>
+              <button id="ctx-next" class="pill" style="cursor:pointer;font-size:0.5em;">Next ▶</button>
+              <span id="ctx-step-label" style="font-size:0.5em;color:#8be9fd;align-self:center;"></span>
+            </div>
             <aside class="notes">
-              This is the intuition pump: front and back matter more than middle.
+              Interactive: click through agent steps to see how context fills.
+              The stacked bars show what's IN the context window at each phase.
+              The attention curve overlay shows what the model actually pays attention to.
+              Watch how system prompt and user intent drift into the valley.
+            </aside>
+          </section>
+          <section data-background="#1a1a2e">
+            <h2>Attention vs. Position</h2>
+            <div id="attention-heatmap" style="width:100%;height:520px;position:relative;"></div>
+            <div style="display:flex;gap:1rem;justify-content:center;margin-top:0.3rem;">
+              <span style="font-size:0.45em;color:#50fa7b;">🟢 High attention</span>
+              <span style="font-size:0.45em;color:#ff5555;">🔴 Low attention (Valley of Meh)</span>
+            </div>
+            <aside class="notes">
+              This heatmap shows how attention is distributed across the context window
+              at different stages of an agent session. The dark band in the middle expands
+              as the agent accumulates tool results. Based on Liu et al. 2023 and
+              Levy et al. ACL 2024 findings.
             </aside>
           </section>
           <section data-background="#282a36">
@@ -1435,7 +1463,498 @@ fi
         if (event.currentSlide && event.currentSlide.querySelector("#persona-viz")) {
           if (window.embeddingsReady) ensurePersonaViz();
         }
+        if (event.currentSlide && event.currentSlide.querySelector("#context-viz")) {
+          initContextViz();
+        }
+        if (event.currentSlide && event.currentSlide.querySelector("#attention-heatmap")) {
+          initAttentionHeatmap();
+        }
       });
+
+      // ═══════════════════════════════════════════════════════════════
+      // CONTEXT WINDOW GROWTH VISUALIZATION
+      // Shows how an agent's context fills over time, with attention overlay
+      // Based on: Liu et al. "Lost in the Middle" (TACL 2023)
+      //           Levy et al. "Same Task, More Tokens" (ACL 2024)
+      // ═══════════════════════════════════════════════════════════════
+
+      var contextVizInitialized = false;
+
+      // Agent session phases — each step adds tokens to the context
+      var CTX_STEPS = [
+        {
+          label: "Initial Prompt",
+          description: "System prompt + user task",
+          segments: { system: 800, user: 200, thought: 0, tool: 0, result: 0, assistant: 0 },
+          totalTokens: 1000
+        },
+        {
+          label: "First Thought",
+          description: "Agent reasons about the task",
+          segments: { system: 800, user: 200, thought: 300, tool: 0, result: 0, assistant: 0 },
+          totalTokens: 1300
+        },
+        {
+          label: "Tool Call #1",
+          description: "Agent reads a file",
+          segments: { system: 800, user: 200, thought: 300, tool: 150, result: 3000, assistant: 0 },
+          totalTokens: 4450
+        },
+        {
+          label: "Tool Call #2",
+          description: "Agent searches codebase",
+          segments: { system: 800, user: 200, thought: 600, tool: 300, result: 8000, assistant: 0 },
+          totalTokens: 9900
+        },
+        {
+          label: "Tool Call #3",
+          description: "Agent runs tests",
+          segments: { system: 800, user: 200, thought: 900, tool: 450, result: 15000, assistant: 0 },
+          totalTokens: 17350
+        },
+        {
+          label: "Mid-Session",
+          description: "10 tool calls deep",
+          segments: { system: 800, user: 200, thought: 2000, tool: 1000, result: 35000, assistant: 1000 },
+          totalTokens: 40000
+        },
+        {
+          label: "Late Session",
+          description: "20+ tool calls, context filling up",
+          segments: { system: 800, user: 200, thought: 4000, tool: 2000, result: 70000, assistant: 3000 },
+          totalTokens: 80000
+        },
+        {
+          label: "Near Limit",
+          description: "Context window almost full",
+          segments: { system: 800, user: 200, thought: 6000, tool: 3000, result: 100000, assistant: 5000 },
+          totalTokens: 115000
+        }
+      ];
+
+      var CTX_COLORS = {
+        system: "#6366f1",    // indigo — system prompt
+        user: "#22d3ee",      // cyan — user messages
+        thought: "#a78bfa",   // violet — agent reasoning
+        tool: "#f59e0b",      // amber — tool call overhead
+        result: "#6b7280",    // gray — tool results (the bulk)
+        assistant: "#10b981"  // emerald — assistant responses
+      };
+
+      var CTX_LABELS = {
+        system: "System Prompt",
+        user: "User Intent",
+        thought: "Agent Reasoning",
+        tool: "Tool Calls",
+        result: "Tool Results",
+        assistant: "Responses"
+      };
+
+      var ctxState = { step: 0, playing: false, timer: null };
+
+      function initContextViz() {
+        if (contextVizInitialized) return;
+        contextVizInitialized = true;
+
+        var container = document.getElementById("context-viz");
+        if (!container) return;
+
+        var width = 900, height = 500;
+        var margin = { top: 40, right: 180, bottom: 60, left: 70 };
+        var chartW = width - margin.left - margin.right;
+        var chartH = height - margin.top - margin.bottom;
+
+        var svgCtx = d3.select(container).append("svg")
+          .attr("viewBox", "0 0 " + width + " " + height)
+          .attr("width", "100%")
+          .style("display", "block");
+
+        // Background
+        svgCtx.append("rect").attr("width", width).attr("height", height).attr("fill", "#0d1117").attr("rx", 12);
+
+        var g = svgCtx.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+        // Scales
+        var x = d3.scaleLinear().domain([0, 128000]).range([0, chartW]);
+        var segKeys = ["system", "user", "thought", "tool", "result", "assistant"];
+
+        // Context window max indicator
+        g.append("rect")
+          .attr("x", 0).attr("y", 0)
+          .attr("width", chartW).attr("height", chartH)
+          .attr("fill", "none").attr("stroke", "#374151").attr("stroke-width", 1)
+          .attr("stroke-dasharray", "4,4").attr("rx", 4);
+
+        g.append("text")
+          .attr("x", chartW).attr("y", -8)
+          .attr("text-anchor", "end").attr("fill", "#6b7280").attr("font-size", "11px")
+          .text("128K context limit");
+
+        // Y axis label
+        svgCtx.append("text")
+          .attr("x", 14).attr("y", height / 2)
+          .attr("text-anchor", "middle").attr("fill", "#9ca3af").attr("font-size", "11px")
+          .attr("transform", "rotate(-90, 14, " + (height / 2) + ")")
+          .text("Token Position in Context");
+
+        // X axis label
+        svgCtx.append("text")
+          .attr("x", margin.left + chartW / 2).attr("y", height - 8)
+          .attr("text-anchor", "middle").attr("fill", "#9ca3af").attr("font-size", "11px")
+          .text("Tokens Consumed");
+
+        // Attention curve overlay — U-shaped
+        var attentionGroup = g.append("g").attr("class", "attention-overlay");
+
+        // Segment bars group
+        var barsGroup = g.append("g").attr("class", "segment-bars");
+
+        // Attention glow labels
+        var glowTop = g.append("text")
+          .attr("x", -8).attr("text-anchor", "end")
+          .attr("fill", "#50fa7b").attr("font-size", "10px").attr("opacity", 0);
+        var glowBot = g.append("text")
+          .attr("x", -8).attr("text-anchor", "end")
+          .attr("fill", "#50fa7b").attr("font-size", "10px").attr("opacity", 0);
+        var valleyLabel = g.append("text")
+          .attr("text-anchor", "middle")
+          .attr("fill", "#ff5555").attr("font-size", "11px").attr("font-weight", "bold").attr("opacity", 0);
+
+        // Legend
+        var legend = svgCtx.append("g").attr("transform", "translate(" + (width - 160) + "," + (margin.top + 10) + ")");
+        segKeys.forEach(function(key, i) {
+          var row = legend.append("g").attr("transform", "translate(0," + (i * 22) + ")");
+          row.append("rect").attr("width", 14).attr("height", 14).attr("rx", 3).attr("fill", CTX_COLORS[key]);
+          row.append("text").attr("x", 20).attr("y", 11).attr("fill", "#e5e7eb").attr("font-size", "11px").text(CTX_LABELS[key]);
+        });
+
+        function renderStep(stepIdx, animate) {
+          var step = CTX_STEPS[stepIdx];
+          var segs = step.segments;
+          var total = step.totalTokens;
+
+          // Update step label
+          document.getElementById("ctx-step-label").textContent =
+            "Step " + (stepIdx + 1) + "/" + CTX_STEPS.length + ": " + step.label + " — " + step.description;
+
+          // Build stacked bar data
+          var barData = [];
+          var cumulative = 0;
+          segKeys.forEach(function(key) {
+            if (segs[key] > 0) {
+              barData.push({ key: key, start: cumulative, end: cumulative + segs[key], value: segs[key] });
+              cumulative += segs[key];
+            }
+          });
+
+          // Y scale for this step (bar height represents context fullness)
+          var barHeight = chartH * (total / 128000);
+          var barY = chartH - barHeight; // grow from bottom
+
+          // Update bars
+          var bars = barsGroup.selectAll("rect.ctx-seg").data(barData, function(d) { return d.key; });
+
+          bars.exit().transition().duration(animate ? 500 : 0).attr("width", 0).remove();
+
+          var barsEnter = bars.enter().append("rect").attr("class", "ctx-seg")
+            .attr("y", function(d) { return barY + (d.start / total) * barHeight; })
+            .attr("x", 0)
+            .attr("width", 0)
+            .attr("height", function(d) { return (d.value / total) * barHeight; })
+            .attr("fill", function(d) { return CTX_COLORS[d.key]; })
+            .attr("opacity", 0.85)
+            .attr("rx", 2);
+
+          var barsAll = barsEnter.merge(bars);
+
+          barsAll.transition().duration(animate ? 700 : 0).ease(d3.easeCubicInOut)
+            .attr("y", function(d) { return barY + (d.start / total) * barHeight; })
+            .attr("x", 0)
+            .attr("width", x(total))
+            .attr("height", function(d) { return Math.max(2, (d.value / total) * barHeight); })
+            .attr("fill", function(d) { return CTX_COLORS[d.key]; });
+
+          // Attention curve (U-shaped) — overlaid as a filled area
+          var numPoints = 50;
+          var attentionData = [];
+          for (var i = 0; i <= numPoints; i++) {
+            var pos = i / numPoints; // 0 to 1
+            // U-shaped: high at edges, low in middle
+            // Based on Liu et al. findings: ~92% at edges, drops to ~52% in middle
+            var attention = 0.5 + 0.42 * Math.pow(2 * pos - 1, 2) + 0.08 * Math.pow(2 * pos - 1, 6);
+            attentionData.push({ pos: pos, attention: attention });
+          }
+
+          var attX = d3.scaleLinear().domain([0, 1]).range([0, x(total)]);
+          var attY = d3.scaleLinear().domain([0, 1]).range([barY + barHeight, barY]);
+
+          var attLine = d3.line()
+            .x(function(d) { return attX(d.pos); })
+            .y(function(d) { return attY(d.attention); })
+            .curve(d3.curveBasis);
+
+          var attArea = d3.area()
+            .x(function(d) { return attX(d.pos); })
+            .y0(barY + barHeight)
+            .y1(function(d) { return attY(d.attention); })
+            .curve(d3.curveBasis);
+
+          // Valley fill (shows the "meh" zone)
+          var valleyFill = attentionGroup.selectAll("path.valley-fill").data([attentionData]);
+          valleyFill.enter().append("path").attr("class", "valley-fill")
+            .attr("fill", "rgba(255, 85, 85, 0.12)")
+            .attr("stroke", "none")
+            .merge(valleyFill)
+            .transition().duration(animate ? 700 : 0)
+            .attr("d", attArea);
+
+          // Attention line
+          var attPath = attentionGroup.selectAll("path.att-line").data([attentionData]);
+          attPath.enter().append("path").attr("class", "att-line")
+            .attr("fill", "none")
+            .attr("stroke", "#50fa7b")
+            .attr("stroke-width", 2.5)
+            .attr("opacity", 0.9)
+            .merge(attPath)
+            .transition().duration(animate ? 700 : 0)
+            .attr("d", attLine);
+
+          // Valley of Meh label
+          var valleyWidth = total > 2000 ? (total * 0.6) : 0;
+          if (stepIdx >= 2) {
+            valleyLabel
+              .transition().duration(animate ? 500 : 0)
+              .attr("x", x(total) / 2)
+              .attr("y", barY + barHeight * 0.65)
+              .attr("opacity", Math.min(1, (stepIdx - 1) * 0.25))
+              .text("← Valley of Meh →");
+          } else {
+            valleyLabel.transition().duration(300).attr("opacity", 0);
+          }
+
+          // Glow labels at attended zones
+          if (stepIdx >= 2) {
+            glowTop.transition().duration(animate ? 500 : 0)
+              .attr("y", barY + 14).attr("opacity", 0.8).text("⬆ High attention");
+            glowBot.transition().duration(animate ? 500 : 0)
+              .attr("y", barY + barHeight - 4).attr("opacity", 0.8).text("⬆ High attention");
+          } else {
+            glowTop.transition().duration(300).attr("opacity", 0);
+            glowBot.transition().duration(300).attr("opacity", 0);
+          }
+
+          // Markers for "system prompt drowning"
+          if (stepIdx >= 4) {
+            var sysEndY = barY + (segs.system / total) * barHeight;
+            var marker = barsGroup.selectAll("text.drown-marker").data([1]);
+            marker.enter().append("text").attr("class", "drown-marker")
+              .attr("fill", "#ff79c6").attr("font-size", "10px")
+              .merge(marker)
+              .transition().duration(animate ? 500 : 0)
+              .attr("x", x(total) + 8)
+              .attr("y", sysEndY)
+              .attr("opacity", 1)
+              .text("← System prompt: " + ((segs.system / total) * 100).toFixed(1) + "% of context");
+          } else {
+            barsGroup.selectAll("text.drown-marker").transition().duration(300).attr("opacity", 0).remove();
+          }
+        }
+
+        // Initial render
+        renderStep(0, false);
+
+        // Controls
+        d3.select("#ctx-next").on("click", function() {
+          if (ctxState.step < CTX_STEPS.length - 1) { ctxState.step++; renderStep(ctxState.step, true); }
+        });
+        d3.select("#ctx-prev").on("click", function() {
+          if (ctxState.step > 0) { ctxState.step--; renderStep(ctxState.step, true); }
+        });
+        d3.select("#ctx-play").on("click", function() {
+          if (ctxState.playing) {
+            clearInterval(ctxState.timer);
+            ctxState.playing = false;
+            d3.select("#ctx-play").text("▶ Play");
+          } else {
+            ctxState.playing = true;
+            d3.select("#ctx-play").text("⏸ Pause");
+            ctxState.step = 0;
+            renderStep(0, true);
+            ctxState.timer = setInterval(function() {
+              if (ctxState.step < CTX_STEPS.length - 1) {
+                ctxState.step++;
+                renderStep(ctxState.step, true);
+              } else {
+                clearInterval(ctxState.timer);
+                ctxState.playing = false;
+                d3.select("#ctx-play").text("▶ Play");
+              }
+            }, 2200);
+          }
+        });
+      }
+
+      // ═══════════════════════════════════════════════════════════════
+      // ATTENTION HEATMAP VISUALIZATION
+      // Shows how attention distributes across context at different session stages
+      // ═══════════════════════════════════════════════════════════════
+
+      var heatmapInitialized = false;
+
+      function initAttentionHeatmap() {
+        if (heatmapInitialized) return;
+        heatmapInitialized = true;
+
+        var container = document.getElementById("attention-heatmap");
+        if (!container) return;
+
+        var width = 900, height = 480;
+        var margin = { top: 50, right: 30, bottom: 70, left: 120 };
+        var chartW = width - margin.left - margin.right;
+        var chartH = height - margin.top - margin.bottom;
+
+        var svgHm = d3.select(container).append("svg")
+          .attr("viewBox", "0 0 " + width + " " + height)
+          .attr("width", "100%")
+          .style("display", "block");
+
+        svgHm.append("rect").attr("width", width).attr("height", height).attr("fill", "#0d1117").attr("rx", 12);
+
+        var g = svgHm.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+        // Session stages (rows)
+        var stages = [
+          "Initial (1K tokens)",
+          "After 3 tool calls (4.5K)",
+          "After 5 tool calls (17K)",
+          "Mid-session (40K)",
+          "Late session (80K)",
+          "Near limit (115K)"
+        ];
+
+        // Position bins (columns)
+        var positions = 20;
+        var posLabels = [];
+        for (var i = 0; i < positions; i++) {
+          if (i === 0) posLabels.push("Start");
+          else if (i === positions - 1) posLabels.push("End");
+          else if (i === Math.floor(positions / 2)) posLabels.push("Middle");
+          else posLabels.push("");
+        }
+
+        // Generate attention matrix: U-shaped curve that gets more extreme over time
+        var matrix = stages.map(function(stage, stageIdx) {
+          var row = [];
+          var depth = stageIdx / (stages.length - 1); // 0 to 1
+          for (var j = 0; j < positions; j++) {
+            var pos = j / (positions - 1); // 0 to 1
+            // U-curve gets deeper as session progresses
+            var base = 0.5 + 0.42 * Math.pow(2 * pos - 1, 2);
+            var valleyDepth = depth * 0.35; // valley gets 35% deeper
+            var attention = base - valleyDepth * (1 - Math.pow(2 * pos - 1, 2));
+            // Clamp
+            attention = Math.max(0.15, Math.min(1.0, attention));
+            row.push(attention);
+          }
+          return row;
+        });
+
+        // Scales
+        var xHm = d3.scaleBand().domain(d3.range(positions)).range([0, chartW]).padding(0.04);
+        var yHm = d3.scaleBand().domain(d3.range(stages.length)).range([0, chartH]).padding(0.08);
+        var colorScale = d3.scaleSequential()
+          .domain([0.15, 1.0])
+          .interpolator(function(t) {
+            // Custom: dark red (low attention) → dark → bright green (high attention)
+            if (t < 0.4) return d3.interpolateRgb("#1a0a0a", "#4a1a1a")(t / 0.4);
+            if (t < 0.7) return d3.interpolateRgb("#4a1a1a", "#1a3a1a")((t - 0.4) / 0.3);
+            return d3.interpolateRgb("#1a3a1a", "#50fa7b")((t - 0.7) / 0.3);
+          });
+
+        // Y axis labels (stages)
+        stages.forEach(function(stage, i) {
+          g.append("text")
+            .attr("x", -8).attr("y", yHm(i) + yHm.bandwidth() / 2)
+            .attr("text-anchor", "end").attr("alignment-baseline", "middle")
+            .attr("fill", "#e5e7eb").attr("font-size", "11px")
+            .text(stage);
+        });
+
+        // X axis labels
+        g.append("text").attr("x", 0).attr("y", chartH + 20)
+          .attr("fill", "#8be9fd").attr("font-size", "11px").text("Start");
+        g.append("text").attr("x", chartW / 2).attr("y", chartH + 20)
+          .attr("text-anchor", "middle").attr("fill", "#ff5555").attr("font-size", "11px").text("Middle");
+        g.append("text").attr("x", chartW).attr("y", chartH + 20)
+          .attr("text-anchor", "end").attr("fill", "#8be9fd").attr("font-size", "11px").text("End");
+
+        svgHm.append("text")
+          .attr("x", margin.left + chartW / 2).attr("y", height - 10)
+          .attr("text-anchor", "middle").attr("fill", "#9ca3af").attr("font-size", "11px")
+          .text("Position in Context Window →");
+
+        svgHm.append("text")
+          .attr("x", 10).attr("y", margin.top + chartH / 2)
+          .attr("text-anchor", "middle").attr("fill", "#9ca3af").attr("font-size", "11px")
+          .attr("transform", "rotate(-90, 10, " + (margin.top + chartH / 2) + ")")
+          .text("Agent Session Progress →");
+
+        // Title
+        svgHm.append("text")
+          .attr("x", width / 2).attr("y", 22)
+          .attr("text-anchor", "middle").attr("fill", "#f8f8f2").attr("font-size", "14px").attr("font-weight", "bold")
+          .text("Model Attention by Position × Session Depth");
+
+        // Draw cells with staggered animation
+        var tooltip = d3.select(container).append("div")
+          .style("position", "absolute").style("pointer-events", "none")
+          .style("background", "rgba(40,42,54,0.95)").style("border", "1px solid #6272a4")
+          .style("border-radius", "6px").style("padding", "6px 10px")
+          .style("font-size", "12px").style("color", "#f8f8f2")
+          .style("opacity", 0).style("transition", "opacity 0.2s");
+
+        matrix.forEach(function(row, i) {
+          row.forEach(function(val, j) {
+            g.append("rect")
+              .attr("x", xHm(j)).attr("y", yHm(i))
+              .attr("width", xHm.bandwidth()).attr("height", yHm.bandwidth())
+              .attr("rx", 3)
+              .attr("fill", colorScale(val))
+              .attr("opacity", 0)
+              .on("mouseover", function(event) {
+                var pct = (val * 100).toFixed(0);
+                var posDesc = j < 3 ? "Beginning" : j > positions - 4 ? "End" : "Middle";
+                tooltip.html("<strong>" + stages[i] + "</strong><br>Position: " + posDesc + "<br>Attention: " + pct + "%")
+                  .style("left", (event.offsetX + 10) + "px")
+                  .style("top", (event.offsetY - 40) + "px")
+                  .style("opacity", 1);
+                d3.select(this).attr("stroke", "#f8f8f2").attr("stroke-width", 2);
+              })
+              .on("mouseout", function() {
+                tooltip.style("opacity", 0);
+                d3.select(this).attr("stroke", "none");
+              })
+              .transition()
+              .delay(i * 120 + j * 30)
+              .duration(400)
+              .ease(d3.easeCubicOut)
+              .attr("opacity", 1);
+          });
+        });
+
+        // Valley annotation arrow
+        var midCol = Math.floor(positions / 2);
+        var lastRow = stages.length - 1;
+        g.append("text")
+          .attr("x", xHm(midCol) + xHm.bandwidth() / 2)
+          .attr("y", chartH + 40)
+          .attr("text-anchor", "middle")
+          .attr("fill", "#ff5555").attr("font-size", "12px").attr("font-weight", "bold")
+          .attr("opacity", 0)
+          .transition().delay(stages.length * 120 + positions * 30 + 200).duration(600)
+          .attr("opacity", 1)
+          .text("↑ Valley deepens as session grows ↑");
+      }
     </script>
 
     <!-- Embeddings loaded async in module - does NOT block Reveal.js -->

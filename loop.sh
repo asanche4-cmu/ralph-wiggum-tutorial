@@ -54,11 +54,22 @@ done
 
 # Set default prompt file based on mode if not specified
 if [ -z "$PROMPT_FILE" ]; then
-    if [ "$MODE" = "plan" ]; then
-        PROMPT_FILE="PROMPT_plan.md"
-    else
-        PROMPT_FILE="PROMPT_build.md"
-    fi
+    case "$MODE" in
+        plan)
+            PROMPT_FILE="PROMPT_plan.md"
+            ;;
+        build)
+            PROMPT_FILE="PROMPT_build.md"
+            ;;
+        review)
+            PROMPT_FILE="PROMPT_review.md"
+            ;;
+        *)
+            echo "Unknown mode: $MODE"
+            echo "Valid modes: plan, build, review"
+            exit 1
+            ;;
+    esac
 fi
 
 ITERATION=0
@@ -98,8 +109,10 @@ while true; do
     #                                    Won't run as root; only use on a repo you can afford to
     #                                    let an agent modify + push. Optional: add --max-turns N
     #                                    to cap agentic turns (and cost) per iteration.
-    OUTPUT=$(claude \
-        -p "$PROMPT_CONTENT" \
+    # Feed the prompt in via stdin (robust on Windows/Git Bash, where a long -p
+    # argument and a `< /dev/null` redirect don't survive the native claude shim).
+    # `claude -p` here is just the print-mode switch; the prompt comes from stdin.
+    OUTPUT=$(printf '%s\n' "$PROMPT_CONTENT" | claude -p \
         --model opus \
         --dangerously-skip-permissions \
         2>&1 | tee /dev/stderr)

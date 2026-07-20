@@ -36,6 +36,29 @@ IMPORTANT ALWAYS RUN these after implementing to get immediate feedback:
 - Lint: `script/lint` → `flake8` + `eslint`
   - Direct: `flake8 src/ tests/` + `cd frontend && npm run lint`
 
+## Local environment (no venv/node_modules committed)
+
+First-time, without the `script/*` helpers (which assume Postgres):
+- Backend: `py -3.13 -m venv .venv && .venv/Scripts/python -m pip install -r requirements-dev.txt`
+  (project needs Python ≥3.12; flask-sqlalchemy 3.1.1 ships types, so `class Game(db.Model)`
+  needs `# type: ignore[misc]` under mypy strict).
+- Frontend: `cd frontend && npm install`. Root E2E deps: `npm install` then `npx playwright install chromium`.
+- Run checks directly: `.venv/Scripts/python -m pytest tests/ -q`, `... -m mypy src/`,
+  `... -m flake8 src/ tests/`; `cd frontend && npm run typecheck|lint|test`.
+
+## E2E on Windows (no local Postgres)
+
+`playwright.config.ts`'s `webServer: script/server` fails under Windows cmd.exe
+(`'script' is not recognized`). Instead start the stack manually with a SQLite DB
+and let Playwright reuse it (`reuseExistingServer` is true):
+```bash
+export PATH="$PWD/.venv/Scripts:$PATH" DATABASE_URL="sqlite:///e2e_test.db" FLASK_APP=src/app:create_app
+flask db upgrade                                   # create games table in the sqlite file
+(cd frontend && npm run dev) &                     # Vite :5173
+flask run --host=127.0.0.1 --port=5000 &           # Flask :5000
+npx playwright test --reporter=list                # never the default html reporter (it blocks)
+```
+
 ## Operational Notes
 
 - **Backend**: Flask on :5000, `PYTHONPATH=src` required when running pytest directly

@@ -1,41 +1,14 @@
 #!/bin/bash
 # script/db-seed - Seed database with development data
 #
-# Creates example records in the database for development/testing.
-# Safe to run multiple times - uses upsert logic where appropriate.
+# Minesweeper games are ephemeral and created on demand via POST /api/games,
+# so there is no meaningful seed data for the base system. This script is a
+# no-op kept in place so the "Scripts to Rule Them All" interface stays
+# complete and any future seedable data (e.g. the Step 2 leaderboard) has a
+# home. It intentionally does not import removed models.
 
 set -e
 
 cd "$(dirname "$0")/.."
 
-# Load environment
-if [ -f .env ]; then
-    export $(grep -v '^#' .env | xargs)
-fi
-
-export FLASK_APP=src/app:create_app
-
-echo "==> Seeding database..."
-
-python << 'EOF'
-from app import create_app
-from app.models import db, Hello
-
-app = create_app()
-with app.app_context():
-    # Check if data already exists
-    if Hello.query.count() == 0:
-        # Add sample greetings
-        samples = [
-            Hello(message="Hello, World!"),
-            Hello(message="Welcome to Ralph Wiggum Tutorial"),
-            Hello(message="React Islands are awesome!"),
-        ]
-        db.session.add_all(samples)
-        db.session.commit()
-        print(f"Added {len(samples)} sample greetings")
-    else:
-        print("Database already has data, skipping seed")
-EOF
-
-echo "==> Database seeded!"
+echo "==> No seed data required (Minesweeper games are created on demand)."

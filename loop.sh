@@ -85,16 +85,24 @@ while true; do
     fi
 
     # Run Ralph iteration with selected prompt
-    # Read the prompt file and pass to copilot
+    # Read the prompt file and pass to Claude Code
     PROMPT_CONTENT=$(cat "$PROMPT_FILE")
     #PROMPT_CONTENT="Update the readme file to say the author is Ralph. Output <promise>DONE</promise> when complete."
     echo "$PROMPT_CONTENT"
 
-    # Capture output while still displaying it
-    OUTPUT=$(copilot \
-        --allow-all-tools \
-        --model claude-opus-4.8 \
-        -p "$PROMPT_CONTENT" 2>&1 | tee /dev/stderr)
+    # Capture output while still displaying it.
+    # Claude Code headless flags:
+    #   -p / --print                     run non-interactively (prompt in, result out, then exit)
+    #   --model opus                     use latest Opus (or a full id like claude-opus-4-8)
+    #   --dangerously-skip-permissions   no approval prompts (== Copilot's --allow-all-tools).
+    #                                    Won't run as root; only use on a repo you can afford to
+    #                                    let an agent modify + push. Optional: add --max-turns N
+    #                                    to cap agentic turns (and cost) per iteration.
+    OUTPUT=$(claude \
+        -p "$PROMPT_CONTENT" \
+        --model opus \
+        --dangerously-skip-permissions \
+        2>&1 | tee /dev/stderr)
 
     # Push changes after each iteration
     git push origin "$CURRENT_BRANCH" || {

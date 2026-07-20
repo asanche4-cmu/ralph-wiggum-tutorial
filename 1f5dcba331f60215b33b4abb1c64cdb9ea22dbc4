@@ -1,0 +1,51 @@
+Step 1 (Base System) — implementation log
+==========================================
+
+WHY key decisions were made:
+
+Redaction as a single serializer (schemas/game.py:serialize_game)
+  The whole cheat-resistance property depends on hidden state never leaving the
+  server. Concentrating serialization in one function means there is exactly one
+  place to audit and one place tested (tests/test_api_game.py::TestRedaction
+  Security). API uses model_dump(exclude_none=True) so hidden/flagged cells emit
+  ONLY {"state": ...} — no adjacent/mine keys at all. Mines are added only when
+  status == 'lost'.
+
+First-click safety trigger = (mine_positions is None)
+  Mines are placed lazily on the first reveal (place_mines), excluding the clicked
+  cell AND its 8 neighbors. Tests inject game.mine_positions directly to make the
+  board deterministic; because reveal() only places mines when mine_positions is
+  None, injection cleanly bypasses RNG.
+
+Iterative flood-fill (explicit stack)
+  Per spec, to avoid call-stack overflow on large empty regions (matters for the
+  Step 2 Expert 16x30 board). Flood skips mines and flagged cells; numbered cells
+  are revealed but not expanded. revealed never contains a mine, so is_won() is a
+  simple count: len(revealed) == rows*cols - mine_count.
+
+Errors returned as JSON directly, not via abort()
+  errors.py content-negotiates on Accept, so bare abort(404) renders HTML unless
+  the client sends Accept: application/json. API handlers return jsonify(...),4xx
+  explicitly AND api.ts sends the Accept header (belt and suspenders).
+
+JSON columns + per-game dimensions
+  db.JSON is portable across Postgres (dev/prod) and SQLite (tests). rows/cols/
+  mine_count live on the row so Step 2 presets need no schema change beyond a
+  `difficulty` column.
+
+VALIDATION (2026-07-19, all green):
+  pytest 27, mypy src/ clean, flake8 src/ tests/ clean, tsc clean, eslint clean,
+  vitest 9, Playwright E2E 5.
+
+ENVIRONMENT GOTCHAS (see AGENTS.md):
+  - No venv/node_modules committed; Python must be >=3.12 (used 3.13). Postgres
+    is NOT available locally — run with DATABASE_URL=sqlite:///e2e_test.db.
+  - flask-sqlalchemy 3.1.1 is typed; `class Game(db.Model)` needs
+    `# type: ignore[misc]` under mypy strict (disallow_subclassing_any).
+  - eslint flat config lacks @typescript-eslint recommended, so core no-undef
+    fires on TS-only DOM types (e.g. RequestInit) — avoid naming them; use a
+    local options interface in api.ts instead.
+  - Playwright webServer `script/server` fails under Windows cmd.exe; start Flask
+    + Vite manually and rely on reuseExistingServer. Always --reporter=list.
+
+NEXT: Step 2 (difficulty presets + leaderboard) — see IMPLEMENTATION_PLAN.md.

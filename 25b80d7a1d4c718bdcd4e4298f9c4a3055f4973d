@@ -1,0 +1,59 @@
+Step 2 (Extension) implementation — design rationale & why decisions.
+
+WHY these choices (for future maintainers):
+
+1. new_game() kept its positional (rows, cols, mine_count) signature and
+   gained difficulty as a 4th param, with a SEPARATE new_game_for_difficulty()
+   for preset creation. Reason: tests/test_minesweeper_logic.py calls
+   ms.new_game(rows, cols, mine_count) positionally; changing the first param
+   to difficulty would break every engine unit test. Keeping dimensions first
+   is non-breaking AND keeps the engine dimension-driven (spec §Notes forbids
+   editing reveal/flood-fill/win for presets).
+
+2. difficulty is its OWN column, not derived from (rows,cols,mine_count).
+   Reason: the leaderboard partitions by difficulty; reverse-mapping dimensions
+   is fragile and breaks if presets are ever re-tuned. The label is the truth.
+
+3. difficulty is OPTIONAL on POST /api/games (missing -> beginner). Reason:
+   the base test_api_game.py::_create posts NO body and expects 9x9/10, and the
+   E2E auto-created game asserts '010'/81 cells. A required field would regress
+   both. Unknown non-empty values are still rejected (400) per spec.
+
+4. Authoritative time = round(ended_at - first_move_at), floored at 0.
+   Reason: the whole point of storing timestamps in Step 1 was un-gameable
+   timing. SubmitScoreRequest deliberately has NO seconds/duration field, so
+   the client CANNOT supply a time — proven by
+   test_client_supplied_duration_is_ignored (sends seconds:1, still records the
+   seeded 42). round() (not truncate) matches the display-only client timer.
+
+5. Duplicate prevention = UNIQUE(scores.game_id) FK + an explicit status check.
+   The FK is the concrete DB-level guard (spec §Notes); the status check gives
+   a clean 422 (not-won) vs 409 (already-recorded) distinction.
+
+6. Status codes come from a NEW shared views/responses.py::json_error with a
+   proper status->label map. The base api.py::_error labelled everything except
+   404 as "Bad Request", which would mislabel 409/422. Both blueprints now
+   share one helper (single source of truth, no duplicate label logic).
+
+7. camelCase WITHOUT pydantic aliases (literal gameId/createdAt fields) to match
+   the existing schemas/game.py convention — avoids a mixed alias/no-alias API.
+
+8. Migration adds games.difficulty with server_default='beginner' so pre-Step-2
+   rows backfill and the column can be NOT NULL. scores.game_id is UNIQUE.
+
+DELIBERATELY NOT DONE:
+- No deterministic-win E2E: mines are placed randomly on first click and there
+  is no UI mine-injection path, so a guaranteed win can't be driven through the
+  browser without a test-only seed endpoint. Adding one would leak test scaffolding
+  into production paths. The win->submit->leaderboard flow is fully covered by
+  test_leaderboard.py (backend) + Leaderboard/Controls vitest (frontend). E2E
+  covers the deterministic parts: 81/256/480 cell counts + leaderboard filter.
+- datetime.utcnow() deprecation left as-is (Phase 0 hygiene): all 4 sites are
+  consistently naive, subtraction is valid, warnings are non-fatal.
+
+TEST COUNTS: pytest 49, mypy clean, flake8 clean, tsc clean, eslint clean,
+vitest 13, playwright 9. All green.
+
+OPERATIONAL LEARNING: relative sqlite:///e2e_test.db resolves to src/instance/
+(Flask instance folder), NOT repo root. Playwright baseURL=localhost:5000
+(Flask shell), assets from Vite :5173; reuseExistingServer reuses running ones.

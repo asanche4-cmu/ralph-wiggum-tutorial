@@ -30,6 +30,64 @@ This repo is fully configured for **GitHub Codespaces** — no local setup neede
 
 ---
 
+## Local Setup (Windows / without Codespaces)
+
+The `script/*` helpers are bash scripts aimed at Codespaces/Linux. To run the app
+directly on Windows, use the steps below. This uses **SQLite** so you don't need a
+running PostgreSQL server — the migrations are SQLite-compatible.
+
+### Prerequisites
+
+- Python 3.12+ (a `.venv/` is already included in this repo)
+- Node 20+
+
+### One-time setup (PowerShell)
+
+```powershell
+# 1. Create your .env from the template
+Copy-Item .env.example .env
+
+# 2. Install Python dependencies into the bundled virtualenv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt -r requirements-dev.txt
+
+# 3. Install frontend dependencies
+cd frontend; npm install; cd ..
+
+# 4. Create the database schema (SQLite file at src/instance/dev.db)
+$env:DATABASE_URL = "sqlite:///dev.db"
+$env:FLASK_APP = "src/app:create_app"
+.\.venv\Scripts\python.exe -m flask db upgrade
+```
+
+### Start the servers
+
+Run each in its own terminal:
+
+```powershell
+# Terminal 1 — Vite (frontend) on http://localhost:5173
+cd frontend; npm run dev
+```
+
+```powershell
+# Terminal 2 — Flask (backend) on http://localhost:5000
+$env:DATABASE_URL = "sqlite:///dev.db"
+$env:FLASK_APP = "src/app:create_app"
+$env:FLASK_DEBUG = "1"
+.\.venv\Scripts\python.exe -m flask run --host=0.0.0.0 --port=5000
+```
+
+Then open **http://localhost:5000** — Flask serves the HTML and hydrates the React
+frontend from the Vite dev server on `:5173`.
+
+> **Using PostgreSQL instead of SQLite?** Start your local PostgreSQL, create an
+> `app` database, and set `DATABASE_URL=postgresql://postgres:postgres@localhost:5432/app`
+> in `.env` (and skip the `$env:DATABASE_URL` line above).
+
+> **Tip:** add `DATABASE_URL=sqlite:///dev.db` to your `.env` so you don't have to
+> set it in each terminal.
+
+---
+
 ## The Loop
 
 The entire workflow is driven by `loop.sh` — a bash script that runs Copilot CLI in a `while true` loop with a prompt file, pushing code after each iteration.

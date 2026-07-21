@@ -101,6 +101,24 @@ Base engine is dimension-driven; do NOT special-case per difficulty — thread d
       `getLeaderboard`/`submitScore` in `api.ts`; handle 409 gracefully.
 - [ ] Extend `e2e/minesweeper.spec.ts`; verify Expert renders; run all 5 validation commands.
 
+## Review findings (2026-07-19) — low-severity cleanup (see REVIEW.md)
+
+These do not block Step 1 but should be addressed; the `datetime` item is worth
+doing before Step 2's authoritative timing math.
+
+- [ ] **Deprecated timestamps.** Replace `datetime.utcnow()` with
+      `datetime.now(datetime.UTC)` in `controllers/minesweeper.py` (`place_mines`,
+      `reveal` loss path, `is_won`) and `models/game.py` (`started_at` default).
+      Removes 68 pytest `DeprecationWarning`s and makes stored timestamps
+      timezone-aware — important because Step 2 computes `ended_at − first_move_at`.
+- [ ] **Unused frontend export.** `getGame` in `frontend/src/minesweeper/api.ts` is
+      exported but never called. Either wire it into a reload/resume flow in
+      `useGame.ts` (spec allows resume via `GET /api/games/<id>`) or delete it.
+- [ ] **Win-path E2E gap.** `e2e/minesweeper.spec.ts` asserts the game *ends* (loss)
+      but never a deterministic **win**. Add a seeded/known-safe win path that
+      asserts the win banner (spec Step 1, Step 16). Best folded into the Step 2
+      E2E work that adds the win → name-submission flow.
+
 ## Risks / watch-outs
 - **Redaction leak** is the highest-risk defect — all responses go through `serialize_game`; test directly.
 - **Flood-fill stays iterative** (explicit stack) for the large Expert board.

@@ -6,5 +6,6 @@ model classes here also ensures SQLAlchemy's metadata is populated (so
 """
 from .base import db
 from .game import Game
+from .score import Score
 
-__all__ = ['db', 'Game']
+__all__ = ['db', 'Game', 'Score']

@@ -49,6 +49,7 @@ class GameStateView(BaseModel):
     """The full redacted game state returned by every API endpoint."""
 
     gameId: int
+    difficulty: str
     rows: int
     cols: int
     mineCount: int
@@ -108,6 +109,7 @@ def serialize_game(game: Game) -> GameStateView:
 
     return GameStateView(
         gameId=game.id,
+        difficulty=game.difficulty,
         rows=game.rows,
         cols=game.cols,
         mineCount=game.mine_count,

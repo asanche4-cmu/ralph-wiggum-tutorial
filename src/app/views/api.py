@@ -20,6 +20,7 @@ from ..controllers import minesweeper
 from ..models import db
 from ..models.game import Game
 from ..schemas.game import MoveRequest, serialize_game
+from .responses import json_error as _error
 
 api_bp = Blueprint('api', __name__)
 
@@ -32,12 +33,6 @@ def _state_response(game: Game, status: int = 200) -> tuple[Response, int]:
     """
     view = serialize_game(game)
     return jsonify(view.model_dump(exclude_none=True)), status
-
-
-def _error(message: str, status: int) -> tuple[Response, int]:
-    """Build a JSON error response independent of the Accept header."""
-    label = 'Not Found' if status == 404 else 'Bad Request'
-    return jsonify(error=label, message=message), status
 
 
 def _load_game(game_id: int) -> Game | None:
@@ -65,8 +60,21 @@ def _parse_move(game: Game) -> tuple[MoveRequest | None, tuple[Response, int] | 
 
 @api_bp.route('/games', methods=['POST'])
 def create_game() -> tuple[Response, int]:
-    """Create a new game. Mines are placed on the first reveal, not here."""
-    game = minesweeper.new_game()
+    """Create a new game at the requested difficulty (default Beginner).
+
+    The body is optional: a missing/empty body keeps the base 9x9/10 Beginner
+    board so existing clients and the island's mount keep working. A present but
+    unknown ``difficulty`` is rejected with a 400 rather than silently defaulted.
+    Mines are placed on the first reveal, not here.
+    """
+    data = request.get_json(silent=True) or {}
+    difficulty = data.get('difficulty', minesweeper.DEFAULT_DIFFICULTY)
+    if not isinstance(difficulty, str):
+        return _error('difficulty must be a string', 400)
+    try:
+        game = minesweeper.new_game_for_difficulty(difficulty)
+    except minesweeper.UnknownDifficulty:
+        return _error(f'Unknown difficulty: {difficulty!r}', 400)
     db.session.add(game)
     db.session.commit()
     return _state_response(game, 201)

@@ -14,6 +14,8 @@ def register_blueprints(app: Flask) -> None:
     """
     from .game import game_bp
     from .api import api_bp
+    from .leaderboard import leaderboard_bp
 
     app.register_blueprint(game_bp)
     app.register_blueprint(api_bp, url_prefix='/api')
+    app.register_blueprint(leaderboard_bp, url_prefix='/api')

@@ -1,29 +1,43 @@
 /**
  * Minesweeper island root.
  *
- * Composes Controls + Board over the `useGame` hook, owns the display-only
- * client timer, and shows a win/loss banner. It starts a game on mount and
- * renders whatever redacted state the server returns — all game outcomes are
- * decided server-side.
+ * Composes the difficulty selector + Controls + Board + Leaderboard over the
+ * `useGame` hook, owns the display-only client timer, and shows a win/loss
+ * banner. On a win it prompts for a name and submits an authoritative score;
+ * the leaderboard refreshes afterwards. All game outcomes and the recorded time
+ * are decided server-side — the client only renders what the server returns.
  */
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
+import { AlreadyRecordedError, submitScore } from '@/minesweeper/api'
 import { Board } from '@/minesweeper/Board'
 import { Controls } from '@/minesweeper/Controls'
+import { Leaderboard } from '@/minesweeper/Leaderboard'
+import { WinDialog } from '@/minesweeper/WinDialog'
 import { useGame } from '@/minesweeper/useGame'
+import type { Difficulty } from '@/minesweeper/types'
 
 export function MinesweeperIsland() {
-  const { state, newGame, revealCell, flagCell } = useGame()
+  const { state, difficulty, newGame, revealCell, flagCell } = useGame()
   const [seconds, setSeconds] = useState(0)
 
-  // Start a game as soon as the island mounts.
+  // Win-submission state. Reset whenever a new game starts (keyed on gameId).
+  const [submitting, setSubmitting] = useState(false)
+  const [recorded, setRecorded] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
+  const [leaderboardVersion, setLeaderboardVersion] = useState(0)
+
+  // Start a Beginner game as soon as the island mounts (keeps the base default).
   useEffect(() => {
-    void newGame()
+    void newGame('beginner')
   }, [newGame])
 
-  // Reset the timer whenever a fresh game begins.
+  // Reset the timer and submission state whenever a fresh game begins.
   useEffect(() => {
     setSeconds(0)
+    setSubmitting(false)
+    setRecorded(false)
+    setSubmitError(null)
   }, [state?.gameId])
 
   // The timer runs once the first cell is revealed and stops when the game ends.
@@ -38,6 +52,37 @@ export function MinesweeperIsland() {
     return () => window.clearInterval(id)
   }, [running])
 
+  const handleDifficultyChange = useCallback(
+    (next: Difficulty) => {
+      void newGame(next)
+    },
+    [newGame],
+  )
+
+  const handleSubmit = useCallback(
+    async (name: string) => {
+      if (!state) return
+      setSubmitting(true)
+      setSubmitError(null)
+      try {
+        await submitScore(state.gameId, name)
+        setRecorded(true)
+        setLeaderboardVersion((v) => v + 1)
+      } catch (err) {
+        if (err instanceof AlreadyRecordedError) {
+          // Already on the board — treat as success so re-submit is disabled.
+          setRecorded(true)
+          setLeaderboardVersion((v) => v + 1)
+        } else {
+          setSubmitError('Could not submit your score. Please try again.')
+        }
+      } finally {
+        setSubmitting(false)
+      }
+    },
+    [state],
+  )
+
   if (!state) {
     return <p className="text-gray-600">Loading…</p>
   }
@@ -49,7 +94,9 @@ export function MinesweeperIsland() {
         flagsUsed={state.flagsUsed}
         seconds={seconds}
         status={state.status}
-        onNewGame={() => void newGame()}
+        difficulty={difficulty}
+        onDifficultyChange={handleDifficultyChange}
+        onNewGame={() => void newGame(difficulty)}
       />
 
       <Board state={state} onReveal={revealCell} onFlag={flagCell} />
@@ -67,6 +114,18 @@ export function MinesweeperIsland() {
           {state.status === 'won' ? 'You win! 🎉' : 'Game over 💥'}
         </div>
       )}
+
+      {state.status === 'won' && (
+        <WinDialog
+          seconds={seconds}
+          submitting={submitting}
+          recorded={recorded}
+          error={submitError}
+          onSubmit={handleSubmit}
+        />
+      )}
+
+      <Leaderboard difficulty={difficulty} refreshKey={leaderboardVersion} />
     </div>
   )
 }

@@ -38,11 +38,16 @@ class Game(db.Model):  # type: ignore[name-defined, misc]
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
-    # Board shape. Stored per-game so Step 2 difficulty presets need no schema
-    # change — the game already carries its own dimensions and mine budget.
+    # Board shape. Stored per-game so the same engine drives every difficulty.
     rows: Mapped[int] = mapped_column(Integer, nullable=False)
     cols: Mapped[int] = mapped_column(Integer, nullable=False)
     mine_count: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    # Which preset this game was created at ('beginner' | 'intermediate' |
+    # 'expert'). Persisted as its own column — not derived from dimensions — so
+    # the leaderboard can partition scores by difficulty without reverse-mapping
+    # board sizes, and so the label survives even if presets are re-tuned later.
+    difficulty: Mapped[str] = mapped_column(String(16), nullable=False, default='beginner')
 
     # Server-only hidden state. ``mine_positions`` is null until first reveal.
     mine_positions: Mapped[list[Coord] | None] = mapped_column(db.JSON, nullable=True)

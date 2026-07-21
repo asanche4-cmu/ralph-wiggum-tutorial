@@ -22,16 +22,35 @@ from typing import Iterator
 
 from ..models.game import Coord, Game
 
-# Base-system board preset (Beginner). Named so Step 2 can generalize into a
-# DIFFICULTIES map without rewriting the engine.
-ROWS = 9
-COLS = 9
-MINE_COUNT = 10
+# Difficulty presets: the single source of truth for board dimensions and mine
+# budgets. ``(rows, cols, mine_count)`` per difficulty. The engine below is fully
+# dimension-driven, so adding presets never touches reveal/flood-fill/win logic.
+DIFFICULTIES: dict[str, tuple[int, int, int]] = {
+    'beginner': (9, 9, 10),
+    'intermediate': (16, 16, 40),
+    'expert': (16, 30, 99),
+}
+
+# Beginner is the default so a no-body ``POST /api/games`` (and the island's
+# mount) keeps the base 9x9/10 behaviour that existing tests/E2E assert.
+DEFAULT_DIFFICULTY = 'beginner'
+
+# Base-system board preset (Beginner) kept as bare constants for the engine's
+# ``new_game`` defaults and unit tests that construct boards dimension-by-hand.
+ROWS, COLS, MINE_COUNT = DIFFICULTIES[DEFAULT_DIFFICULTY]
 
 # Game status values surfaced to the client.
 STATUS_PLAYING = 'playing'
 STATUS_WON = 'won'
 STATUS_LOST = 'lost'
+
+
+class UnknownDifficulty(ValueError):
+    """Raised when a caller requests a difficulty not in ``DIFFICULTIES``.
+
+    The API layer turns this into a 400 so the client learns the value was
+    rejected rather than silently coerced.
+    """
 
 
 def neighbors(row: int, col: int, rows: int, cols: int) -> Iterator[tuple[int, int]]:
@@ -63,17 +82,41 @@ def _as_list(coords: set[tuple[int, int]]) -> list[Coord]:
     return [[r, c] for r, c in sorted(coords)]
 
 
-def new_game(rows: int = ROWS, cols: int = COLS, mine_count: int = MINE_COUNT) -> Game:
-    """Create a fresh game with no mines placed yet (first-click safety)."""
+def new_game(
+    rows: int = ROWS,
+    cols: int = COLS,
+    mine_count: int = MINE_COUNT,
+    difficulty: str = DEFAULT_DIFFICULTY,
+) -> Game:
+    """Create a fresh game with no mines placed yet (first-click safety).
+
+    ``difficulty`` is stored purely as a label (the leaderboard partitions by
+    it); the board shape comes from ``rows``/``cols``/``mine_count``. Prefer
+    :func:`new_game_for_difficulty` when creating from a preset name so the label
+    and dimensions can never drift apart.
+    """
     return Game(
         rows=rows,
         cols=cols,
         mine_count=mine_count,
+        difficulty=difficulty,
         mine_positions=None,
         revealed=[],
         flags=[],
         status=STATUS_PLAYING,
     )
+
+
+def new_game_for_difficulty(difficulty: str = DEFAULT_DIFFICULTY) -> Game:
+    """Create a game from a named preset, keeping label and dimensions in sync.
+
+    Raises :class:`UnknownDifficulty` for any name not in :data:`DIFFICULTIES`
+    so the API can reject it with a 400 rather than fabricating a board.
+    """
+    if difficulty not in DIFFICULTIES:
+        raise UnknownDifficulty(difficulty)
+    rows, cols, mine_count = DIFFICULTIES[difficulty]
+    return new_game(rows, cols, mine_count, difficulty)
 
 
 def place_mines(game: Game, safe_row: int, safe_col: int) -> None:

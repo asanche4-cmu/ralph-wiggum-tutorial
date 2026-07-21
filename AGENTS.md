@@ -53,11 +53,15 @@ First-time, without the `script/*` helpers (which assume Postgres):
 and let Playwright reuse it (`reuseExistingServer` is true):
 ```bash
 export PATH="$PWD/.venv/Scripts:$PATH" DATABASE_URL="sqlite:///e2e_test.db" FLASK_APP=src/app:create_app
-flask db upgrade                                   # create games table in the sqlite file
-(cd frontend && npm run dev) &                     # Vite :5173
+flask db upgrade                                   # creates tables in src/instance/e2e_test.db
+(cd frontend && npm run dev) &                     # Vite :5173 (skip if one is already running)
 flask run --host=127.0.0.1 --port=5000 &           # Flask :5000
 npx playwright test --reporter=list                # never the default html reporter (it blocks)
 ```
+Notes: the relative `sqlite:///e2e_test.db` resolves to **`src/instance/`** (Flask
+instance folder), not repo root. baseURL is `localhost:5000` (Flask serves the HTML
+shell; assets load from Vite :5173). `reuseExistingServer` is true, so an
+already-running Vite/Flask is reused — no need to start your own if the ports are up.
 
 ## Operational Notes
 

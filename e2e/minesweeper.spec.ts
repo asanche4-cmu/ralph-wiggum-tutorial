@@ -61,4 +61,36 @@ test.describe('Minesweeper Page', () => {
 
     await expect(page.getByTestId('status-banner')).toBeVisible();
   });
+
+  // Step 2: difficulty presets. Selecting a difficulty starts a fresh
+  // server-generated board of the matching size, proving the whole stack
+  // (selector -> createGame(difficulty) -> preset lookup -> dimension-driven
+  // render) works end-to-end, including the wide 30-column Expert board.
+  const presets = [
+    { difficulty: 'beginner', cells: 81 },
+    { difficulty: 'intermediate', cells: 256 },
+    { difficulty: 'expert', cells: 480 },
+  ];
+  for (const { difficulty, cells } of presets) {
+    test(`selecting ${difficulty} renders a ${cells}-cell board`, async ({ page }) => {
+      await page.goto('/');
+      await expect(page.getByTestId('board')).toBeVisible();
+
+      await page.getByTestId('difficulty').selectOption(difficulty);
+      await expect(page.locator('[data-testid^="cell-"]')).toHaveCount(cells);
+    });
+  }
+
+  // Step 2: the leaderboard is mounted and reflects the selected difficulty.
+  // (Its populated ordering is covered by backend API tests; a deterministic
+  // win can't be driven through the UI because mines are placed randomly on the
+  // first click and there is no UI mine-injection path.)
+  test('leaderboard is visible and follows the selected difficulty', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.getByTestId('leaderboard')).toBeVisible();
+    await expect(page.getByTestId('leaderboard')).toHaveAttribute('data-difficulty', 'beginner');
+
+    await page.getByTestId('difficulty').selectOption('expert');
+    await expect(page.getByTestId('leaderboard')).toHaveAttribute('data-difficulty', 'expert');
+  });
 });

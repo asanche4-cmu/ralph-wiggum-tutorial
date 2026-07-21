@@ -1,28 +1,34 @@
 /**
  * Game state hook.
  *
- * Holds the current `gameId` + redacted `GameStateView` and exposes actions that
- * post to the server and replace local state with the server's authoritative
- * response. The client never computes board outcomes itself — it only renders
- * what the server returns.
+ * Holds the current `gameId` + redacted `GameStateView`, the currently selected
+ * `difficulty`, and exposes actions that post to the server and replace local
+ * state with the server's authoritative response. The client never computes
+ * board outcomes itself — it only renders what the server returns.
  */
 import { useCallback, useState } from 'react'
 
 import { createGame, flag as apiFlag, reveal as apiReveal } from './api'
-import type { GameStateView } from './types'
+import type { Difficulty, GameStateView } from './types'
 
 export interface UseGame {
   state: GameStateView | null
-  newGame: () => Promise<void>
+  difficulty: Difficulty
+  newGame: (difficulty: Difficulty) => Promise<void>
   revealCell: (row: number, col: number) => Promise<void>
   flagCell: (row: number, col: number) => Promise<void>
 }
 
 export function useGame(): UseGame {
   const [state, setState] = useState<GameStateView | null>(null)
+  const [difficulty, setDifficulty] = useState<Difficulty>('beginner')
 
-  const newGame = useCallback(async () => {
-    setState(await createGame())
+  const newGame = useCallback(async (next: Difficulty) => {
+    // Track the chosen difficulty before the request so the UI (selector,
+    // leaderboard) reflects the new level immediately, then adopt the server's
+    // authoritative fresh state.
+    setDifficulty(next)
+    setState(await createGame(next))
   }, [])
 
   const revealCell = useCallback(
@@ -41,5 +47,5 @@ export function useGame(): UseGame {
     [state],
   )
 
-  return { state, newGame, revealCell, flagCell }
+  return { state, difficulty, newGame, revealCell, flagCell }
 }

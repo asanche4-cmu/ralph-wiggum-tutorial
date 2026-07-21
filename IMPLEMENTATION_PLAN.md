@@ -132,3 +132,22 @@ Tests:
 - `vite build` empties `src/app/static/` (removes `.gitkeep`); restore after a prod build.
 - E2E on Windows: relative sqlite resolves to `src/instance/`; reuse a running
   Vite/Flask (`reuseExistingServer`); always `--reporter=list` (see `AGENTS.md`).
+
+## Review follow-up tasks (2026-07-21 review — PASS)
+- [ ] **Remove or wire up the dead `getGame` export** in
+  `frontend/src/minesweeper/api.ts`. It is defined but never imported anywhere in
+  the frontend. Either delete the export, OR wire it into a page-reload/resume flow
+  in `frontend/src/minesweeper/useGame.ts` and
+  `frontend/src/minesweeper/MinesweeperIsland.tsx`.
+  - Acceptance: no unused export remains; `npm run lint` and `npm run typecheck`
+    stay clean.
+- [ ] **Migrate the four `datetime.utcnow()` call sites to
+  `datetime.now(timezone.utc)`** in one pass to silence the 81 deprecation
+  warnings. Sites: `src/app/models/game.py` (`started_at` default),
+  `src/app/models/score.py` (`created_at` default), and
+  `src/app/controllers/minesweeper.py` (two sites: `place_mines` sets
+  `first_move_at`, and the `ended_at` assignments in `reveal`/`is_won`). Migrate
+  ALL sites together so naive/aware datetimes are never mixed (the subtraction in
+  `record_score` must stay valid).
+  - Acceptance: `pytest tests/` passes with zero `DeprecationWarning`s from these
+    sites.

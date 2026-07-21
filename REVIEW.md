@@ -1,207 +1,203 @@
-# Implementation Review — Server-Authoritative Minesweeper
-
-_Reviewed: 2026-07-19 · Branch: `main` · HEAD: `1f5dcba`_
-
 # Overall Status
 
-**FAIL** — against the full specification set in `specs/`.
+**PASS**
 
-This verdict is scope-driven, not quality-driven. `specs/` contains **two** specs:
+Every acceptance criterion in both specs is satisfied with positive, executed
+evidence. All validation surfaces were run serially in this review and are
+green (pytest 49, mypy clean, flake8 clean, vitest 13, tsc clean, eslint clean,
+Playwright 9). The two behavioral gates required by the review prompt — the
+server-authoritative redaction check (item 5) and first-click safety /
+flood-fill (item 6) — were verified by execution, not by reading the source.
 
-- `specs/minesweeper-game.md` (Step 1, Base System) — **fully implemented, all 10
-  acceptance criteria met, all executable validation passes.** This is a clean PASS.
-- `specs/minesweeper-step2-extension.md` (Step 2, Extension) — **not implemented at
-  all** (no difficulty presets, no `Score` model, no leaderboard API/UI). 0 of 9
-  acceptance criteria met.
-
-Because Step 2's acceptance criteria are unmet, the aggregate status against everything
-under `specs/` is FAIL. Note that `IMPLEMENTATION_PLAN.md` explicitly scopes Step 2 as
-"NEXT WORK," so this is expected sequencing rather than a defect in delivered work. If the
-review is scoped to "the currently delivered milestone (Step 1)," that milestone is a PASS.
+Two findings remain, both **Low** severity and non-blocking (a dead
+`getGame` export and `datetime.utcnow()` deprecation warnings). Neither affects
+correctness or any acceptance criterion.
 
 # Executive Summary
 
-The Step 1 base system is in excellent shape. It is a faithful, idiomatic implementation of
-a server-authoritative Minesweeper: all secret state (mine positions, revealed/flag sets)
-lives in the database, and every response is funneled through a single redacting serializer
-(`serialize_game`) that provably prevents mine/adjacency leakage for unrevealed cells. The
-engine is dimension-driven (not hard-coded to 9×9), flood-fill is iterative (no recursion
-overflow risk), and first-click safety covers the clicked cell plus its 8 neighbors. Code is
-well-documented with *why*-oriented comments, and the Hello World / Space Invaders scaffolds
-are fully removed with no residual references.
+The project is a server-authoritative Minesweeper (Step 1) extended with three
+difficulty presets and a persistent leaderboard (Step 2). The architecture is
+clean and matches `IMPLEMENTATION_PLAN.md` and both specs: the game engine in
+`controllers/minesweeper.py` is fully dimension-driven and untouched by the
+Step 2 additions; a single redacting serializer (`schemas/game.py`) is the only
+path from `Game` to the wire; and the leaderboard trust boundary
+(`controllers/leaderboard.py`) computes elapsed time solely from server-stored
+timestamps with the submit schema deliberately carrying no duration field.
 
-All executable validation passes: **pytest 27/27, mypy clean (14 files), flake8 clean,
-vitest 9/9, tsc clean, eslint clean.** The Playwright E2E suite was **not re-executed in this
-review** (Windows manual-server workaround required — see Test Coverage); its source is
-present and the plan claims 5/5.
+All tests pass and the security-critical properties hold under execution:
+- A `playing` game's API response leaks **zero** mine/adjacency data for
+  unrevealed cells (verified on an actual Intermediate response body).
+- The first revealed cell (and its neighbors) is never a mine across 200 fresh
+  games.
+- Elapsed time cannot be forged from the client (a body carrying
+  `seconds:1, duration:0` still records the seeded server time of 42s).
 
-Findings are limited to a few low-severity items: one unused exported frontend function
-(`getGame`), a deprecated `datetime.utcnow()` usage that emits 68 warnings, and an E2E gap
-(no deterministic win path is asserted). None block the Step 1 milestone.
+The health of the project is high. Recommended actions are cosmetic.
 
 # Specification Compliance
 
-## `specs/minesweeper-game.md` — Step 1 (Base System): **PASS**
+## `specs/minesweeper-game.md` (Step 1 — Base System)
 
-| # | Acceptance Criterion | Status | Evidence |
-|---|----------------------|--------|----------|
-| 1 | `/` shows a 9×9 board with mine counter, timer, new-game button | PASS | `templates/game.html` mounts `data-island="minesweeper"`; `MinesweeperIsland.tsx` renders `Controls` (counter/timer/new-game) + `Board`; E2E `renders a 9x9 board with controls` asserts 81 cells + counter `010`. |
-| 2 | Mines stored server-side, never in responses for unrevealed cells | PASS | `models/game.py` holds `mine_positions`; `schemas/game.py::_cell_view` emits mine/adjacent only for revealed/lost; API uses `model_dump(exclude_none=True)`; `test_api_game.py::TestRedactionSecurity` asserts on the wire. |
-| 3 | First revealed cell is never a mine | PASS | `controllers/minesweeper.py::place_mines` excludes safe cell + 8 neighbors; mines placed only on first reveal. `test_minesweeper_logic.py::test_first_reveal_never_loses` (50 iters), `test_first_click_and_neighbors_are_safe`. |
-| 4 | Left-click reveals; zero cell flood-fills contiguous region | PASS | Iterative flood-fill in `reveal()`; `test_zero_cell_floods_contiguous_region`, `test_numbered_cell_does_not_flood`. |
-| 5 | Right-click toggles flag and updates remaining-mine counter | PASS | `Cell.tsx` `onContextMenu` → `preventDefault` + `onFlag`; `Controls` shows `mineCount − flagsUsed`; `test_flag_toggles_and_updates_counter`, Cell/Controls unit tests, E2E flag test. |
-| 6 | Revealing a mine → loss, shows all mines | PASS | `reveal()` sets `status=lost`; serializer exposes all mines when `lost`; `test_loss_exposes_full_mine_layout`. |
-| 7 | Revealing all non-mine cells → win | PASS | `is_won()` count comparison; `test_revealing_all_safe_cells_wins`, `test_win_requires_all_safe_cells`. |
-| 8 | New-game button starts a fresh board | PASS | `Controls` face button → `onNewGame` → `useGame.newGame()` → `POST /api/games`. |
-| 9 | All Hello World code removed | PASS | No `hello`/`space invader` references remain in `src/`, `frontend/src/`, `tests/`, `e2e/` (grep clean); `db-seed` is a documented no-op; migration `f1a2b3c4d5e6` drops `hellos`. |
-| 10 | All validation commands pass with zero errors | PASS (unit/type/lint) / UNVERIFIED (E2E) | pytest 27/27, mypy clean, flake8 clean, vitest 9/9, tsc clean, eslint clean. E2E not re-run this review. |
+| AC | Verdict | Evidence |
+|----|---------|----------|
+| 1. `/` shows 9×9 board + counter/timer/new-game | **PASS** | E2E `renders a 9x9 board with controls` — 81 cells, mine-counter `010`, timer + new-game visible. |
+| 2. Mines server-side, never in unrevealed responses | **PASS** | Behavioral probe: created an Intermediate game, revealed (8,8), server held 40 mine_positions; response board had 0 `mine` keys and 0 `adjacent` keys on the 226 unrevealed cells; raw JSON contained no `"mine"` substring. Also `test_playing_response_never_leaks_mines`. |
+| 3. First revealed cell never a mine | **PASS** | Behavioral probe: 0 losses over 200 fresh Intermediate first-clicks. Unit `test_first_reveal_never_loses` (50 iterations) + `test_first_click_and_neighbors_are_safe`. |
+| 4. Left-click reveals; zero cell flood-fills | **PASS** | `test_zero_cell_floods_contiguous_region` (24 cells revealed, mine excluded); `test_numbered_cell_does_not_flood`; E2E `revealing a cell starts the timer`. |
+| 5. Right-click toggles flag + updates counter | **PASS** | E2E `right-click flags a cell and updates the counter` (counter `010`→`009`); `test_flag_toggles_and_updates_counter`. |
+| 6. Revealing a mine → loss, shows all mines | **PASS** | `test_loss_exposes_full_mine_layout` (injected mines, all exposed on loss); E2E `revealing cells eventually ends the game`. |
+| 7. All non-mine cells revealed → win | **PASS** | `test_revealing_all_safe_cells_wins`; `test_win_requires_all_safe_cells`. |
+| 8. New-game button starts fresh board | **PASS** | `Controls` new-game wired to `newGame(difficulty)`; E2E board renders on load/selection. |
+| 9. All Hello World code removed | **PASS** | Code search: no `hello` modules/imports remain in `src/`, `frontend/src/`, `tests/`, `e2e/`. |
+| 10. All validation commands pass | **PASS** | See Test Coverage — all six surfaces green. |
 
-**Missing functionality:** none for Step 1.
+## `specs/minesweeper-step2-extension.md` (Step 2 — Extension)
 
-## `specs/minesweeper-step2-extension.md` — Step 2 (Extension): **FAIL (not started)**
-
-| # | Acceptance Criterion | Status |
-|---|----------------------|--------|
-| 1 | Difficulty selector (Beginner/Intermediate/Expert) | FAIL — not implemented |
-| 2 | Selecting a difficulty starts a correctly-sized server board | FAIL |
-| 3 | Base gameplay works at every difficulty | N/A — engine is dimension-ready but no preset path exists |
-| 4 | On win, submit name; time recorded | FAIL |
-| 5 | Server-authoritative completion time | FAIL |
-| 6 | Score recorded only for `won` games, only once | FAIL |
-| 7 | Leaderboard per difficulty, sorted ascending, filtered | FAIL |
-| 8 | Leaderboard persists across restarts | FAIL |
-| 9 | All validation commands pass | N/A |
-
-**Missing functionality (complete):** `DIFFICULTIES` map + `new_game(difficulty)`;
-`difficulty` column + migration; `Score` model + migration; `schemas/score.py`;
-`controllers/leaderboard.py`; leaderboard API routes; frontend difficulty selector,
-`Leaderboard.tsx`, win-submission flow, `getLeaderboard`/`submitScore`; `tests/test_presets.py`,
-`tests/test_leaderboard.py`. The groundwork exists (per-game `rows/cols/mine_count`,
-`first_move_at`/`ended_at` timestamps, dimension-driven engine and `Board`), so Step 2 is
-additive as designed.
+| AC | Verdict | Evidence |
+|----|---------|----------|
+| 1. Selector offers Beginner/Intermediate/Expert | **PASS** | `Controls.tsx` renders `DIFFICULTIES` (9×9/10, 16×16/40, 16×30/99); `types.ts::DIFFICULTIES`. |
+| 2. Selecting a difficulty starts correct-size board | **PASS** | E2E `selecting {beginner,intermediate,expert} renders a {81,256,480}-cell board` — all pass; `test_create_with_difficulty` (parametrized dims). |
+| 3. Base gameplay works at every difficulty | **PASS** | Engine is dimension-driven (unchanged); behavioral probe played an Intermediate board (reveal + flood-fill) successfully; E2E renders 480-cell Expert. |
+| 4. On win, player submits name, time recorded | **PASS** | `test_records_authoritative_time` returns 201 with the entry; `WinDialog` + `MinesweeperIsland` submission flow; `submitScore` → `POST /api/leaderboard`. |
+| 5. Time computed authoritatively server-side | **PASS** | `test_client_supplied_duration_is_ignored`: body `{seconds:1,duration:0}` still records seeded 42s. `record_score` derives `round(ended_at − first_move_at)`; `SubmitScoreRequest` has no duration field. |
+| 6. Score only for `won` game, only once | **PASS** | `test_cannot_submit_for_playing_game`/`_lost_game` → 422; `test_cannot_double_submit` → 409 with exactly one row persisted; enforced by status check + `UNIQUE(scores.game_id)`. |
+| 7. Leaderboard per difficulty, ascending, filtered | **PASS** | `test_sorted_ascending_and_filtered_by_difficulty` (beginner `[10,30]`, expert isolated); `top_scores` orders by `seconds, created_at`. |
+| 8. Persists across restarts | **PASS** | DB-backed `scores` table (migration `b2c3d4e5f6a7`); `test_score_survives_reload` re-reads after `expire_all()`. |
+| 9. All validation commands pass | **PASS** | See Test Coverage. |
 
 # Critical Issues
 
-None for the delivered Step 1 milestone. The only release-blocking item relative to the full
-`specs/` set is that Step 2 is entirely unimplemented (tracked in `IMPLEMENTATION_PLAN.md`).
+None.
 
 # Functional Bugs
 
-No verified functional bugs found in Step 1. Correctness spot-checks all held:
-
-- Loss path returns before `is_won()`, so a mine in `revealed` never miscounts a win.
-- A revealed mine can never appear while `status != lost` (revealing a mine sets `lost`), so
-  the serializer's "expose mine only on loss" branch is consistent with the reveal logic.
-- Flood-fill stack skips mines/flags/already-revealed, terminating correctly.
-- Counter/`threeDigits` clamps to `[-99, 999]` for the over-flag display case.
+None verified. All engine, API, redaction, and leaderboard behaviors matched
+their specifications under execution.
 
 # Test Coverage
 
-**Executed this review:**
-- `pytest tests/` → **27 passed** (logic, API redaction/security, view). ⚠️ 68
-  `DeprecationWarning`s for `datetime.utcnow()`.
-- `mypy src/` → **clean** (14 files).
-- `flake8 src/ tests/` → **clean**.
-- `frontend`: `vitest run` → **9 passed** (Cell 5, Controls 4); `tsc --noEmit` → **clean**;
-  `eslint src/` → **clean**.
+## Tests executed (actual output summary)
 
-**Not executed:** Playwright E2E (`e2e/minesweeper.spec.ts`). On this Windows host the
-`webServer: script/server` config fails under cmd.exe (documented in `AGENTS.md`), requiring a
-manual SQLite server bring-up. Source is present (5 tests); the plan claims 5/5 previously.
-This review does not independently confirm E2E green.
+| Command | Result |
+|---------|--------|
+| `pytest tests/` (`PYTHONPATH=src`) | **49 passed**, 81 warnings, 1.76s |
+| `mypy src/` | **Success: no issues found in 19 source files** |
+| `flake8 src/ tests/` | **clean** (exit 0) |
+| `npm test` (vitest) | **13 passed** (Cell 5, Controls 5, Leaderboard 3) |
+| `npm run typecheck` (tsc --noEmit) | **clean** (no output) |
+| `npm run lint` (eslint) | **clean** (no output) |
+| `npx playwright test --reporter=list` | **9 passed**, 6.9s |
 
-**Coverage gaps (low severity):**
-- E2E asserts a game *ends* (loss via clicking every cell) but never asserts a **deterministic
-  win path**, which the spec's Step 16 ("a seeded scenario reaches a win") calls for. The win
-  banner is only exercised in unit-level `Controls` rendering.
-- No frontend unit tests for `Board`, `useGame`, or `MinesweeperIsland` (the spec explicitly
-  makes frontend unit tests optional and defers to E2E, so this is acceptable, not a defect).
-- `getGame` (resume-after-reload) has backend coverage (`test_get_returns_current_state`) but
-  the frontend never calls it, so the resume flow is untested end-to-end (spec permits "cleanly
-  starts a new game" instead, which is what the island does).
+E2E was run per the AGENTS.md Windows recipe: SQLite DB via `flask db upgrade`
+(→ `src/instance/e2e_test.db`), Vite (:5173) and Flask (:5000) started manually,
+Playwright reusing the running servers. All server/DB-touching commands were run
+serially in a single context, never concurrently.
 
-**Missing regression tests:** none required for Step 1 beyond the win-path E2E gap above.
+## Behavioral verification (beyond the suites)
+
+- **Server-authority (item 5):** live Intermediate game, post-reveal response
+  body inspected — 0 mine keys, 0 adjacent keys on 226 unrevealed cells, no
+  `"mine"` in raw JSON, while the server row held 40 mines. PASS.
+- **First-click safety (item 6):** 0 losses over 200 fresh first-clicks. PASS.
+
+## Passing tests
+
+All 49 backend + 13 frontend + 9 E2E tests pass.
+
+## Failing tests
+
+None.
+
+## Coverage gaps
+
+- **No UI-level win → submit → leaderboard E2E.** This is a deliberate,
+  documented omission: mines are placed randomly on the first click and there
+  is no UI mine-injection path, so a guaranteed win cannot be driven through the
+  browser without a test-only seed endpoint (which was intentionally not added
+  to keep production paths clean). The full win/submit/verify flow is covered by
+  `test_leaderboard.py` (backend) and `Leaderboard`/`Controls` vitest. Acceptable.
+- Frontend unit coverage for `WinDialog` and `useGame` is indirect (exercised via
+  island composition rather than dedicated tests). Low impact; spec marks
+  frontend unit tests optional.
+
+## Missing regression tests
+
+None material. The base-default regression guard
+(`test_missing_body_defaults_to_beginner`) and the client-time-ignored guard are
+both present.
 
 # Architecture Review
 
-- **Single source of truth:** Strong. Board rules live only in
-  `controllers/minesweeper.py`; the redaction guarantee lives only in
-  `schemas/game.py::serialize_game`; the frontend wire contract lives only in
-  `frontend/src/minesweeper/types.ts`. `count_adjacent` is defined once and reused by the
-  serializer.
-- **Duplication:** Minor and benign. `_as_set`/`_coord_set` (list-of-pairs → set-of-tuples)
-  exists in both `controllers/minesweeper.py` and `schemas/game.py`. It's a 3-line helper
-  duplicated across two layers that shouldn't depend on each other, so this is a defensible
-  boundary rather than harmful duplication — noted for awareness.
-- **Separation of concerns:** Clean. Model = state, controller = rules, schema = serialization/
-  redaction, views = HTTP. Frontend mirrors this (api/types/hook/components/island).
-- **API consistency:** Consistent — every state response goes through `_state_response` →
-  `serialize_game`; errors return JSON directly (not `abort()`) so API clients get JSON
-  regardless of `Accept`. Endpoints match the spec's API contract exactly.
-- **Server authority:** Fully upheld. The client computes no outcomes; `useGame` short-circuits
-  actions when not `playing` purely as a UX optimization, and the server independently rejects
-  post-game moves.
-- **Technical debt:** Low. The engine and `Board` are already dimension-driven for Step 2;
-  timing columns are pre-wired. Pre-existing scaffold debt (`logging_config.py` branching on the
-  never-set `app.config['ENV']`; stale `.github/skills/*` docs) is out of scope and noted in the
-  plan.
+- **Duplication:** None of concern. The status→label map was consolidated into
+  `views/responses.py::json_error`, shared by both API blueprints, removing the
+  base game's ad-hoc "Bad Request"-for-everything helper. `_coord_set`/`_as_set`
+  appear in both `schemas/game.py` and `controllers/minesweeper.py`, but they
+  serve different layers (serializer vs engine) and each is a 3-line helper —
+  acceptable separation, not harmful duplication.
+- **Separation of concerns:** Clean. Engine (rules) / schema (redaction) /
+  controller (leaderboard trust) / views (HTTP↔controller) are well isolated.
+  Views only translate HTTP and map `ScoreError.status` to codes.
+- **Single source of truth:** `DIFFICULTIES` (backend) is the sole board-spec
+  authority; `difficulty` is stored as its own column (not reverse-mapped from
+  dimensions); the redacting serializer is the only `Game`→wire path.
+- **API consistency:** Uniform camelCase (literal fields, no aliases) across
+  `game.py` and `score.py`; all errors flow through one helper.
+- **Technical debt:** Minimal — one dead export and deprecation warnings (below).
 
 # Code Quality
 
-- **Maintainability / Readability:** High. Consistent naming, small focused functions, module
-  docstrings that explain rationale.
-- **Complexity:** Appropriate. Flood-fill is the only non-trivial algorithm and is clearly
-  commented and iterative.
-- **Documentation:** Strong and *why*-oriented (e.g., why mines are placed on first reveal, why
-  JSON columns, why errors bypass `abort()`) — meets the "explains why, not what" bar.
-- **Error handling:** `_parse_move` handles non-JSON bodies (`silent=True`), schema validation
-  errors, and out-of-range coordinates, each → 400; unknown id → 404. No cell revealed/flagged
-  guards are bypassable.
-- **Dead code:** `getGame` in `frontend/src/minesweeper/api.ts` is exported but never imported
-  anywhere (low severity).
-- **Placeholders/TODOs/stubs:** None found (grep for TODO/FIXME/HACK/stub/placeholder/debugger
-  clean). No stray `console.log`/`print`. `db-seed` is an intentional, documented no-op.
+- **Maintainability:** High. Modules are small, single-purpose, and documented
+  with *why* rationale (the git note and module docstrings explain design
+  decisions, e.g. why `new_game` kept its positional signature).
+- **Readability:** High. Naming is consistent with surrounding code; the engine
+  reads clearly (iterative flood-fill with an explicit stack, guard clauses).
+- **Complexity:** Appropriate. Flood-fill is iterative (no recursion-overflow
+  risk on Expert). No over-engineering.
+- **Documentation:** Docstrings explain intent, not just mechanics (redaction
+  guarantee, authoritative-timing rationale, first-click safety). `AGENTS.md`
+  accurately captures the Windows E2E recipe, which reproduced cleanly.
+- **Error handling:** Typed `ScoreError` subclasses carry their HTTP status;
+  the view maps exceptions straight to responses. Bad JSON, wrong types, missing
+  fields, and out-of-range coordinates are all handled (400).
 
 # Security & Reliability
 
-- **Validation:** Request bodies validated via Pydantic; coordinates bounds-checked against the
-  game's own dimensions before use.
-- **Data exposure:** The core security property — mine/adjacency data never leaks for unrevealed
-  cells during a `playing`/`won` game — is enforced in one place and directly tested
-  (`TestRedactionSecurity`). Mines are exposed only when `status == lost`.
-- **Error handling:** Failure paths (bad JSON, bad types, missing fields, out-of-range, unknown
-  id) all return correct status codes with JSON bodies.
-- **State consistency:** Loss/win finalization sets `status` + `ended_at` atomically within the
-  reveal; `revealed` never contains a mine outside the loss cell.
-- **Concurrency:** Each request loads → mutates → commits a single game row. No cross-request
-  shared mutable state. Two concurrent reveals on the same game could interleave (last-writer-
-  wins on the JSON columns), but this is a single-player game with no correctness guarantee
-  required across simultaneous clients — acceptable for the spec.
-- **Performance:** Serializer rebuilds the full board per response (O(rows×cols), with
-  `count_adjacent` O(8) per revealed cell) — negligible for 9×9 and fine even for the future
-  16×30 Expert board.
+- **Validation:** Name trimmed + bounded (1–20 chars) in the request schema
+  before the controller runs; unknown difficulty → 400; coordinates
+  bounds-checked; malformed/non-JSON bodies → 400.
+- **Error handling:** Distinct, correct codes — 404 (unknown game), 422
+  (not won / missing timing), 409 (duplicate), 400 (bad input). Verified by
+  tests.
+- **State consistency:** `revealed` never contains a mine (guarded), so win
+  detection is a safe count comparison; a won game always has both
+  `first_move_at` and `ended_at`, and `InvalidTiming` guards the corrupt-row
+  case with a clean 422 rather than a 500.
+- **Data exposure (behavioral check):** CONFIRMED clean — a live `playing`
+  Intermediate response exposed no mine positions or adjacency for any of its
+  226 unrevealed cells while the server held all 40 mines. Mines are exposed
+  only on loss, and only through the single serializer.
+- **Concurrency issues:** None identified. Each request loads, mutates, and
+  commits a single game row; duplicate submissions are additionally guarded by a
+  DB-level unique constraint (defense in depth beyond the status check).
+- **Performance concerns:** None. Leaderboard reads are single-table,
+  `LIMIT 10`; board serialization is O(rows×cols).
 
 # Recommended Actions
 
-1. **Critical** — Implement Step 2 (`specs/minesweeper-step2-extension.md`): difficulty presets,
-   `Score` model + migration, leaderboard controller/API with server-authoritative timing and
-   single-submission verification, and the leaderboard/win-submission frontend. Tasks are
-   enumerated in `IMPLEMENTATION_PLAN.md`.
+1. **Critical** — None.
 2. **High** — None.
-3. **Medium** — Add a deterministic **win-path E2E** (seed/inject mine positions or reveal a
-   known-safe sequence) to cover the win banner end-to-end, closing the spec Step 16 gap.
-4. **Low** —
-   - Replace `datetime.utcnow()` with `datetime.now(datetime.UTC)` in
-     `controllers/minesweeper.py` and `models/game.py` to remove 68 deprecation warnings and
-     store timezone-aware timestamps (relevant before Step 2's authoritative timing math).
-   - Either wire `getGame` into a reload/resume flow in `useGame` or remove the unused export.
-   - (Optional) Extract the shared `[row,col] → set[tuple]` helper if a common util layer is
-     introduced in Step 2; not worth a dependency edge on its own today.
+3. **Medium** — None.
+4. **Low**
+   - Remove the unused `getGame` export in `frontend/src/minesweeper/api.ts`
+     (dead code — defined, never imported), or wire it into a reload/resume flow.
+   - Migrate the four `datetime.utcnow()` call sites
+     (`models/game.py`, `models/score.py`, `controllers/minesweeper.py` ×2) to
+     `datetime.now(timezone.utc)` in one pass to silence the 81 deprecation
+     warnings. Non-blocking (all sites are consistently naive, so subtraction is
+     correct today).
 
 # Overall Confidence
 
-**High** for the Step 1 assessment — verified through direct code reading and by executing the
-full unit/type/lint suite (63 checks green). **Medium** on E2E specifically, which was not
-re-executed in this environment. The Step 2 "not implemented" finding is certain (verified by
-code search: no `Score` model, no leaderboard routes, no `DIFFICULTIES` map — only forward-
-looking comments referencing them).
+**High.** Every acceptance criterion is backed by an executed test or an
+observed API response, including the two behavioral gates the review prompt
+singles out. The only findings are cosmetic and already tracked.

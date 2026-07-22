@@ -1,0 +1,334 @@
+###Initial base plan prompt:
+
+0a. Study specs/* with up to 250 parallel Sonnet subagents to learn the application specifications.
+0b. Study @IMPLEMENTATION_PLAN.md (if present) to understand the plan so far.
+0c. Study frontend/src/minesweeper/* and src/app/schemas/* with up to 250 parallel Sonnet subagents to understand shared utilities, types, and the API contract.
+0d. For reference, the application source code is in src/app/* (Flask backend) and frontend/src/* (React Islands frontend).
+
+Study @IMPLEMENTATION_PLAN.md (if present; it may be incorrect) and use up to 500 Sonnet subagents to study existing source code in src/app/* and frontend/src/* and compare it against specs/*. Use an Opus subagent to analyze findings, prioritize tasks, and create/update @IMPLEMENTATION_PLAN.md as a bullet point list sorted in priority of items yet to be implemented. Ultrathink. Consider searching for TODO, minimal implementations, placeholders, skipped/flaky tests, and inconsistent patterns. Study @IMPLEMENTATION_PLAN.md to determine starting point for research and keep it up to date with items considered complete/incomplete using subagents.
+
+IMPORTANT: Plan only. Do NOT implement anything. Do NOT assume functionality is missing; confirm with code search first. Treat frontend/src/minesweeper (shared types, API client) and src/app/schemas (request/response schemas) as the project's shared surface. Prefer consolidated, idiomatic implementations there over ad-hoc copies.
+
+ULTIMATE GOAL: A complete, working server-authoritative Minesweeper base system. The Flask backend generates and stores the mine layout, never exposes unrevealed mine positions to the client, validates every reveal/flag, performs first-click-safe board generation, flood-fill, and win/loss detection, and exposes a JSON API. The React Islands frontend renders a single fixed-difficulty (9x9, 10 mines) board and supports a full game (reveal, flag, win, loss, new game). The Hello World demo is fully removed. Success = every acceptance criterion and validation command in specs/* passes with zero errors. Consider missing elements and plan accordingly. If an element is missing, search first to confirm it doesn't exist, then if needed author the specification at specs/FILENAME.md. If you create a new element then document the plan to implement it in @IMPLEMENTATION_PLAN.md using a subagent
+
+###Initial base build prompt:
+
+0a. Study `specs/*` with up to 500 parallel Sonnet subagents to learn the application specifications.
+0b. Study @IMPLEMENTATION_PLAN.md.
+0c. For reference, the application source code is in `src/app/*` (Flask backend) and `frontend/src/*` (React Islands frontend).
+
+1. Your task is to implement functionality per the specifications using parallel subagents. Follow @IMPLEMENTATION_PLAN.md and choose the most important item to address. Before making changes, search the codebase (don't assume not implemented) using Sonnet subagents. You may use up to 50 parallel Sonnet subagents for searches/reads and only 1 Sonnet subagent for build/tests. Use Opus subagents when complex reasoning is needed (debugging, architectural decisions).
+2. After implementing functionality or resolving problems, run the tests for that unit of code that was improved. If functionality is missing then it's your job to add it as per the application specifications. Ultrathink.
+3. When you discover issues, immediately update @IMPLEMENTATION_PLAN.md with your findings using a subagent. When resolved, update and remove the item.
+4. When the tests pass, update @IMPLEMENTATION_PLAN.md, then `git add -A` then `git commit` with a message describing the changes. After the commit, `git push` `git push origin refs/notes/commits`.
+
+99999. Important: When authoring documentation, capture the why — tests and implementation importance.
+999999. Important: Single sources of truth, no migrations/adapters. If tests unrelated to your work fail, resolve them as part of the increment.
+9999999. Use Git commit notes to extensively log the changes made during implementation for future reference. Reference previous commmit notes when trying to understand why something was done, fetch notes when needed `git fetch origin refs/notes/commits:refs/notes/commits`.
+99999999. You may add extra logging if required to debug issues.
+999999999. Keep @IMPLEMENTATION_PLAN.md current with learnings using a subagent — future work depends on this to avoid duplicating efforts. Update especially after finishing your turn.
+9999999999. When you learn something new about how to run the application, update @AGENTS.md using a subagent but keep it brief. For example if you run commands multiple times before learning the correct command then that file should be updated.
+99999999999. For any bugs you notice, resolve them or document them in @IMPLEMENTATION_PLAN.md using a subagent even if it is unrelated to the current piece of work.
+999999999999. Implement functionality completely. Placeholders and stubs waste efforts and time redoing the same work.
+9999999999999. When @IMPLEMENTATION_PLAN.md becomes large periodically clean out the items that are completed from the file using a subagent.
+99999999999999. If you find inconsistencies in the specs/* then use an Opus 4.5 subagent with 'ultrathink' requested to update the specs.
+999999999999999. IMPORTANT: Keep @AGENTS.md operational only — status updates and progress notes belong in `IMPLEMENTATION_PLAN.md`. A bloated AGENTS.md pollutes every future loop's context.
+9999999999999999. IMPORTANT: once full implementation is complete, output `<promise>DONE</promise>`
+
+###Initial review prompt:
+
+0a. Study specs/* with up to 250 parallel Sonnet subagents to understand the intended behavior.
+0b. Study @IMPLEMENTATION_PLAN.md if present.
+0c. Study the relevant implementation in src/app/* (Flask backend) and frontend/src/* (React Islands frontend) using up to 250 parallel Sonnet subagents.
+0d. Review recent git commits and git notes to understand why changes were made. Use Opus subagents when architectural reasoning or debugging is required.
+
+Your task is to perform a comprehensive implementation review. Do NOT implement new functionality unless fixing a trivial issue required to validate correctness.
+
+Your primary output is a complete REVIEW.md document that replaces any previous version. REVIEW.md should always reflect the current state of the project.
+
+The review must verify:
+
+1. Every acceptance criterion in specs/* is satisfied.
+2. The implementation matches @IMPLEMENTATION_PLAN.md.
+3. No placeholders, TODOs, stubs, mock implementations, temporary workarounds, or dead code remain.
+4. The implementation follows the project's architecture with a single source of truth and avoids duplicate logic.
+5. The backend remains server-authoritative where required and does not expose restricted internal state.
+6. Error handling, validation, edge cases, and failure paths are implemented correctly.
+7. Tests adequately cover the implemented functionality.
+8. Existing tests still pass without regressions.
+9. Documentation accurately explains why the implementation exists, not merely what it does.
+10. Performance, maintainability, readability, and consistency with surrounding code are acceptable.
+11. Search for skipped/flaky tests, commented-out code, FIXME/TODO markers, unnecessary logging, debugging artifacts, or partially completed implementations.
+12. Search for duplicated logic or inconsistencies that should instead share common utilities or abstractions.
+
+Create REVIEW.md with the following sections:
+
+# Overall Status
+
+PASS / FAIL
+
+# Executive Summary
+
+A concise overview of the current health of the project.
+
+# Specification Compliance
+
+For each specification:
+- PASS / PARTIAL / FAIL
+- Evidence
+- Missing functionality
+
+# Critical Issues
+
+Issues that would prevent release.
+
+# Functional Bugs
+
+Verified bugs with reproduction information when available.
+
+# Test Coverage
+
+- Tests executed
+- Passing tests
+- Failing tests
+- Coverage gaps
+- Missing regression tests
+
+# Architecture Review
+
+- Duplication
+- Separation of concerns
+- Single source of truth
+- API consistency
+- Technical debt
+
+# Code Quality
+
+- Maintainability
+- Readability
+- Complexity
+- Documentation
+- Error handling
+
+# Security & Reliability
+
+- Validation
+- Error handling
+- State consistency
+- Data exposure
+- Concurrency issues
+- Performance concerns
+
+# Recommended Actions
+
+Prioritized list:
+
+1. Critical
+2. High
+3. Medium
+4. Low
+
+# Overall Confidence
+
+High / Medium / Low
+
+If issues are discovered:
+
+- Update IMPLEMENTATION_PLAN.md with actionable implementation work.
+- REVIEW.md should contain findings only.
+- IMPLEMENTATION_PLAN.md should contain tasks.
+
+Run all appropriate tests before finalizing REVIEW.md.
+
+If trivial issues preventing validation are encountered, you may fix them before continuing the review.
+
+IMPORTANT:
+
+- REVIEW.md must always be regenerated from scratch.
+- Do not append to old reviews.
+- Do not assume functionality is missing; verify through code search.
+- Prefer evidence over assumptions.
+- Use Opus subagents for complex reasoning.
+- Ultrathink before reporting specification mismatches.
+- Focus on correctness over style.
+- Output <promise>DONE</promise> after REVIEW.md has been written successfully.
+
+###Extension Plan Prompt:
+
+0a. Study specs/* with up to 250 parallel Sonnet subagents to learn the application specifications.
+0b. Study @IMPLEMENTATION_PLAN.md (if present) to understand the plan so far.
+0c. Study frontend/src/minesweeper/* and src/app/schemas/* with up to 250 parallel Sonnet subagents to understand shared utilities, types, and the API contract.
+0d. For reference, the application source code is in src/app/* (Flask backend) and frontend/src/* (React Islands frontend).
+
+Study @IMPLEMENTATION_PLAN.md (if present; it may be incorrect) and use up to 500 Sonnet subagents to study existing source code in src/app/* and frontend/src/* and compare it against specs/*. Use an Opus subagent to analyze findings, prioritize tasks, and create/update @IMPLEMENTATION_PLAN.md as a bullet point list sorted in priority of items yet to be implemented. Ultrathink. Consider searching for TODO, minimal implementations, placeholders, skipped/flaky tests, and inconsistent patterns. Study @IMPLEMENTATION_PLAN.md to determine starting point for research and keep it up to date with items considered complete/incomplete using subagents.
+
+IMPORTANT: Plan only. Do NOT implement anything. Do NOT assume functionality is missing; confirm with code search first. Treat frontend/src/minesweeper (shared types, API client) and src/app/schemas (request/response schemas) as the project's shared surface. Prefer consolidated, idiomatic implementations there over ad-hoc copies.
+
+ULTIMATE GOAL: Extend the working base Minesweeper with three difficulty presets (Beginner 9x9/10, Intermediate 16x16/40, Expert 16x30/99) and a persistent, server-authoritative leaderboard of best completion times computed from server timestamps, reusing the base engine unchanged. Success = every acceptance criterion and validation command in the extension spec passes with zero errors.
+
+###Build extension prompt:
+
+0a. Study `specs/*` with up to 500 parallel Sonnet subagents to learn the application specifications.
+0b. Study @IMPLEMENTATION_PLAN.md.
+0c. For reference, the application source code is in `src/app/*` (Flask backend) and `frontend/src/*` (React Islands frontend).
+
+1. Your task is to implement functionality per the specifications using parallel subagents. Follow @IMPLEMENTATION_PLAN.md and choose the most important item to address. Before making changes, search the codebase (don't assume not implemented) using Sonnet subagents. You may use up to 50 parallel Sonnet subagents for searches/reads and only 1 Sonnet subagent for build/tests. Use Opus subagents when complex reasoning is needed (debugging, architectural decisions).
+2. After implementing functionality or resolving problems, run the tests for that unit of code that was improved. If functionality is missing then it's your job to add it as per the application specifications. Ultrathink.
+3. When you discover issues, immediately update @IMPLEMENTATION_PLAN.md with your findings using a subagent. When resolved, update and remove the item.
+4. When the tests pass, update @IMPLEMENTATION_PLAN.md, then `git add -A` then `git commit` with a message describing the changes. After the commit, `git push` `git push origin refs/notes/commits`.
+
+99999. Important: When authoring documentation, capture the why — tests and implementation importance.
+999999. Important: Single sources of truth, no migrations/adapters. If tests unrelated to your work fail, resolve them as part of the increment.
+9999999. Use Git commit notes to extensively log the changes made during implementation for future reference. Reference previous commmit notes when trying to understand why something was done, fetch notes when needed `git fetch origin refs/notes/commits:refs/notes/commits`.
+99999999. You may add extra logging if required to debug issues.
+999999999. Keep @IMPLEMENTATION_PLAN.md current with learnings using a subagent — future work depends on this to avoid duplicating efforts. Update especially after finishing your turn.
+9999999999. When you learn something new about how to run the application, update @AGENTS.md using a subagent but keep it brief. For example if you run commands multiple times before learning the correct command then that file should be updated.
+99999999999. For any bugs you notice, resolve them or document them in @IMPLEMENTATION_PLAN.md using a subagent even if it is unrelated to the current piece of work.
+999999999999. Implement functionality completely. Placeholders and stubs waste efforts and time redoing the same work.
+9999999999999. When @IMPLEMENTATION_PLAN.md becomes large periodically clean out the items that are completed from the file using a subagent.
+99999999999999. If you find inconsistencies in the specs/* then use an Opus 4.5 subagent with 'ultrathink' requested to update the specs.
+999999999999999. IMPORTANT: Keep @AGENTS.md operational only — status updates and progress notes belong in `IMPLEMENTATION_PLAN.md`. A bloated AGENTS.md pollutes every future loop's context.
+9999999999999999. IMPORTANT: once full implementation is complete, output `<promise>DONE</promise>`
+
+###Review extension prompt:
+
+0a. Study `specs/*` with up to 250 parallel Sonnet subagents to understand the intended behavior.
+0b. Study @IMPLEMENTATION_PLAN.md if present.
+0c. Study the relevant implementation in `src/app/*` (Flask backend) and `frontend/src/*` (React Islands frontend) using up to 250 parallel Sonnet subagents.
+0d. Review recent git commits and git notes to understand why changes were made (`git fetch origin refs/notes/commits:refs/notes/commits` then `git log --notes`). Use Opus subagents when architectural reasoning or debugging is required.
+
+Your task is to perform a comprehensive implementation review. Do NOT implement new functionality unless fixing a trivial issue required to validate correctness (see the "trivial fixes" rule below).
+
+Your primary output is a complete REVIEW.md document that replaces any previous version. REVIEW.md must always reflect the current state of the project and must be regenerated from scratch — never append to an old review.
+
+## Evidence standard (read first)
+
+You are reviewing code that may have been written by a peer agent. Do NOT grade leniently. Apply these rules:
+
+- A criterion is PASS only with POSITIVE evidence: a test you executed and observed pass, or a concrete check you ran (e.g. an actual API response body). Reading the source and finding it "looks correct" is NOT sufficient for PASS.
+- If you cannot verify a criterion by execution, mark it PARTIAL and say what evidence is missing. "Could not verify" is never PASS.
+- Prefer evidence over assumptions. Do not assume functionality is missing; confirm with code search first. Equally, do not assume it works because the code is present.
+- Ultrathink before reporting any specification mismatch.
+
+## Test execution rules (IMPORTANT — avoid false failures)
+
+Tests share resources: E2E starts a dev server on a fixed port and tests hit a shared database. Running them in parallel causes port/DB collisions and produces failures that are not real.
+
+- Anything that builds, starts a server, or touches the database (`script/test`, `script/test-e2e`, `script/typecheck`, `script/lint`) MUST be run SERIALLY in a SINGLE subagent, one at a time. Never run two such commands concurrently.
+- Only read-only searches and file reads may fan out across many subagents.
+- Run all appropriate validation commands before finalizing REVIEW.md and record their actual output.
+
+## The review must verify
+
+1. Every acceptance criterion in `specs/*` is satisfied.
+2. The implementation matches @IMPLEMENTATION_PLAN.md.
+3. No placeholders, TODOs, stubs, mock implementations, temporary workarounds, or dead code remain.
+4. The implementation follows the project's architecture with a single source of truth and avoids duplicate logic.
+5. The backend remains server-authoritative where required and does not expose restricted internal state. VERIFY BEHAVIORALLY, not by reading the serializer: create an in-progress game via the API and inspect an actual response body, asserting that NO unrevealed-mine data (mine positions/adjacency for hidden cells) is present. A single leaking code path invalidates this even if the serializer looks clean.
+6. First-click safety and flood-fill are correct. VERIFY with executed tests (seed/inject mine positions for determinism), not by static reading — these cannot be confirmed by inspection.
+7. Error handling, validation, edge cases, and failure paths are implemented correctly.
+8. Tests adequately cover the implemented functionality.
+9. Existing tests still pass without regressions.
+10. Documentation accurately explains WHY the implementation exists, not merely what it does.
+11. Performance, maintainability, readability, and consistency with surrounding code are acceptable.
+12. Search for skipped/flaky tests, commented-out code, FIXME/TODO markers, unnecessary logging, debugging artifacts, or partially completed implementations.
+13. Search for duplicated logic or inconsistencies that should instead share common utilities or abstractions.
+
+## Create REVIEW.md with the following sections
+
+# Overall Status
+
+PASS / FAIL. (PASS requires positive, executed evidence for every acceptance criterion — including the behavioral checks in items 5 and 6 above.)
+
+# Executive Summary
+
+A concise overview of the current health of the project.
+
+# Specification Compliance
+
+For each specification:
+- PASS / PARTIAL / FAIL
+- Evidence (the executed test or observed output supporting the verdict)
+- Missing functionality
+
+# Critical Issues
+
+Issues that would prevent release.
+
+# Functional Bugs
+
+Verified bugs with reproduction information when available.
+
+# Test Coverage
+
+- Tests executed (with the actual command output summary)
+- Passing tests
+- Failing tests
+- Coverage gaps
+- Missing regression tests
+
+# Architecture Review
+
+- Duplication
+- Separation of concerns
+- Single source of truth
+- API consistency
+- Technical debt
+
+# Code Quality
+
+- Maintainability
+- Readability
+- Complexity
+- Documentation
+- Error handling
+
+# Security & Reliability
+
+- Validation
+- Error handling
+- State consistency
+- Data exposure (include the behavioral server-authoritative check from item 5)
+- Concurrency issues
+- Performance concerns
+
+# Recommended Actions
+
+Prioritized list:
+
+1. Critical
+2. High
+3. Medium
+4. Low
+
+# Overall Confidence
+
+High / Medium / Low
+
+## Findings vs. tasks
+
+If issues are discovered:
+- Update @IMPLEMENTATION_PLAN.md with actionable implementation work, using a subagent.
+- REVIEW.md contains findings only.
+- @IMPLEMENTATION_PLAN.md contains tasks only.
+
+## Trivial fixes
+
+If a trivial issue is blocking validation (e.g. a broken import, a missing test fixture, a typo'd command), you MAY fix it so the review can proceed. Anything non-trivial is a finding, not a fix — record it and move on. Do not implement new functionality.
+
+## Commit (REQUIRED — do not skip)
+
+The loop only pushes; it does not stage or commit for you. After REVIEW.md and @IMPLEMENTATION_PLAN.md are written:
+1. `git add -A`
+2. `git commit` with a message describing the review, e.g. `review: <PASS|FAIL> — <N> findings`
+3. Log the review outcome to git notes for future reference.
+The loop will push after you return.
+
+## Final rules
+
+- REVIEW.md must always be regenerated from scratch. Do not append to old reviews.
+- Do not assume functionality is missing; verify through code search.
+- Prefer evidence over assumptions. Focus on correctness over style.
+- Use Opus subagents for complex reasoning.
+- This is a SINGLE-PASS review — run it with `-n 1`. It reports the current state once; it does not iterate to green. (The DONE promise below fires whether the verdict is PASS or FAIL.)
+- Output `<promise>DONE</promise>` only after REVIEW.md has been written AND the commit above has succeeded.
